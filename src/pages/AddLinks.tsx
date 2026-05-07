@@ -1,12 +1,49 @@
 import { useState } from 'react'
-import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { collection, doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { toast } from 'sonner'
 import type { User } from 'firebase/auth'
 import { db } from '@/firebase'
-import { parseUrlsFromPaste } from '@/lib/urls'
+import { hostnameOf, parseUrlsFromPaste } from '@/lib/urls'
+import { extractUrl } from '@/lib/extract'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+const EMPTY_EXTRACTED = {
+  company: '',
+  role: '',
+  salary: '',
+  location: '',
+  workArrangement: '',
+  source: '',
+}
+
+const EXTRACT_CONCURRENCY = 4
+
+async function runExtractions(jobs: { id: string; url: string }[]) {
+  let i = 0
+  const workers = Array.from({ length: Math.min(EXTRACT_CONCURRENCY, jobs.length) }, async () => {
+    while (i < jobs.length) {
+      const job = jobs[i++]
+      const ref = doc(db, 'pendingUrls', job.id)
+      await updateDoc(ref, { extraction: 'loading' }).catch(() => {})
+      const result = await extractUrl(job.url)
+      if (result.ok) {
+        await updateDoc(ref, {
+          extraction: 'done',
+          extracted: result.extracted,
+          extractError: '',
+        }).catch(() => {})
+      } else {
+        await updateDoc(ref, {
+          extraction: 'error',
+          extractError: result.error,
+        }).catch(() => {})
+      }
+    }
+  })
+  await Promise.all(workers)
+}
 
 export function AddLinks({ user }: { user: User }) {
   const [text, setText] = useState('')
@@ -17,6 +54,7 @@ export function AddLinks({ user }: { user: User }) {
     if (preview.valid.length === 0) return
     setSubmitting(true)
     try {
+      const jobs: { id: string; url: string }[] = []
       const chunks: string[][] = []
       for (let i = 0; i < preview.valid.length; i += 400) {
         chunks.push(preview.valid.slice(i, i + 400))
@@ -24,21 +62,14 @@ export function AddLinks({ user }: { user: User }) {
       for (const chunk of chunks) {
         const batch = writeBatch(db)
         for (const url of chunk) {
-          const ref = doc(collection(db, 'applications'))
+          const ref = doc(collection(db, 'pendingUrls'))
+          jobs.push({ id: ref.id, url })
           batch.set(ref, {
             url,
-            company: '',
-            role: '',
-            salary: '',
-            location: '',
-            workArrangement: '',
-            source: '',
-            tags: [],
-            status: 'pending',
-            notes: '',
-            deadline: null,
-            followUpDate: null,
-            appliedAt: null,
+            hostname: hostnameOf(url),
+            extraction: 'idle',
+            extracted: EMPTY_EXTRACTED,
+            extractError: '',
             createdAt: serverTimestamp(),
             addedBy: user.uid,
             addedByName: user.displayName ?? user.email ?? 'Unknown',
@@ -47,10 +78,11 @@ export function AddLinks({ user }: { user: User }) {
         await batch.commit()
       }
       toast.success(
-        `Added ${preview.valid.length} link${preview.valid.length === 1 ? '' : 's'}` +
+        `Added ${jobs.length} to Pending — extracting…` +
           (preview.invalid.length ? ` · ${preview.invalid.length} skipped` : ''),
       )
       setText('')
+      void runExtractions(jobs)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to add links')
     } finally {
@@ -63,7 +95,7 @@ export function AddLinks({ user }: { user: User }) {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Add Links</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Paste one URL per line. We'll create a pending application for each.
+          Paste one URL per line. Each one lands in <span className="font-medium">Pending</span> for review — we'll auto-extract company, role, salary, etc.
         </p>
       </div>
       <Card>

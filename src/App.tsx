@@ -3,12 +3,14 @@ import { Toaster } from 'sonner'
 import type { User } from 'firebase/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { useApplications } from '@/hooks/useApplications'
+import { usePendingUrls } from '@/hooks/usePendingUrls'
 import { AuthGate } from '@/components/AuthGate'
 import { Nav, type View } from '@/components/Nav'
 import { Dashboard } from '@/pages/Dashboard'
 import { Applications } from '@/pages/Applications'
 import { Kanban } from '@/pages/Kanban'
 import { AddLinks } from '@/pages/AddLinks'
+import { Pending } from '@/pages/Pending'
 
 function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -23,13 +25,12 @@ function useDarkMode() {
   return [dark, () => setDark(d => !d)] as const
 }
 
+const KNOWN_VIEWS: View[] = ['dashboard', 'applications', 'kanban', 'pending', 'add']
+
 function useView() {
   const [view, setView] = useState<View>(() => {
-    const hash = window.location.hash.slice(1)
-    if (hash === 'applications' || hash === 'kanban' || hash === 'add' || hash === 'dashboard') {
-      return hash
-    }
-    return 'dashboard'
+    const hash = window.location.hash.slice(1) as View
+    return KNOWN_VIEWS.includes(hash) ? hash : 'dashboard'
   })
   useEffect(() => {
     window.location.hash = view
@@ -50,6 +51,7 @@ function AppShell({
 }) {
   const [view, setView] = useView()
   const { apps, loading } = useApplications()
+  const { pending, loading: pendingLoading } = usePendingUrls()
   return (
     <div className="min-h-svh">
       <Nav
@@ -59,6 +61,7 @@ function AppShell({
         onSignOut={onSignOut}
         dark={dark}
         onToggleDark={onToggleDark}
+        pendingCount={pending.length}
       />
       {view === 'dashboard' ? (
         <Dashboard apps={apps} />
@@ -66,6 +69,8 @@ function AppShell({
         <Applications apps={apps} loading={loading} />
       ) : view === 'kanban' ? (
         <Kanban apps={apps} />
+      ) : view === 'pending' ? (
+        <Pending user={user} pending={pending} loading={pendingLoading} />
       ) : (
         <AddLinks user={user} />
       )}

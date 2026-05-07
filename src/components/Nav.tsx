@@ -3,12 +3,13 @@ import type { User } from 'firebase/auth'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type View = 'dashboard' | 'applications' | 'kanban' | 'add'
+export type View = 'dashboard' | 'applications' | 'kanban' | 'pending' | 'add'
 
 const TABS: { id: View; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'applications', label: 'Applications' },
   { id: 'kanban', label: 'Kanban' },
+  { id: 'pending', label: 'Pending' },
   { id: 'add', label: 'Add Links' },
 ]
 
@@ -19,6 +20,7 @@ export function Nav({
   onSignOut,
   dark,
   onToggleDark,
+  pendingCount,
 }: {
   view: View
   onView: (v: View) => void
@@ -26,6 +28,7 @@ export function Nav({
   onSignOut: () => void
   dark: boolean
   onToggleDark: () => void
+  pendingCount: number
 }) {
   return (
     <header className="sticky top-0 z-30 border-b bg-[var(--color-background)]/80 backdrop-blur">
@@ -37,13 +40,18 @@ export function Nav({
               key={t.id}
               onClick={() => onView(t.id)}
               className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 view === t.id
                   ? 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)]'
                   : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]',
               )}
             >
               {t.label}
+              {t.id === 'pending' && pendingCount > 0 ? (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--color-primary)] px-1.5 text-[10px] font-semibold text-[var(--color-primary-foreground)]">
+                  {pendingCount}
+                </span>
+              ) : null}
             </button>
           ))}
         </nav>

@@ -9,6 +9,9 @@ service cloud.firestore {
     match /applications/{id} {
       allow read, write: if isAllowed();
     }
+    match /pendingUrls/{id} {
+      allow read, write: if isAllowed();
+    }
     match /allowlist/{email} {
       allow read: if request.auth != null;
       allow write: if false;

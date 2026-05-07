@@ -33,3 +33,26 @@ export const STATUS_LABELS: Record<Status, string> = {
   offer: 'Offer',
   rejected: 'Rejected',
 }
+
+export type PendingExtractStatus = 'idle' | 'loading' | 'done' | 'error'
+
+export type ExtractedFields = {
+  company: string
+  role: string
+  salary: string
+  location: string
+  workArrangement: WorkArrangement
+  source: string
+}
+
+export interface PendingUrl {
+  id: string
+  url: string
+  hostname: string
+  extraction: PendingExtractStatus
+  extracted: ExtractedFields
+  extractError: string
+  addedBy: string
+  addedByName: string
+  createdAt: Timestamp | null
+}
