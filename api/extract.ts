@@ -3,10 +3,10 @@ import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { generateText } from 'ai'
 import { minimax } from 'vercel-minimax-ai-provider'
-import { requireAllowedUser } from './_lib/requireAllowedUser'
-import { resolveSafeUrl, safeUrl, type ResolvedAddress } from './_lib/safeUrl'
-import { rateLimit } from './_lib/rateLimit'
-import { htmlToText } from './_lib/htmlToText'
+import { requireAllowedUser } from './_lib/requireAllowedUser.js'
+import { resolveSafeUrl, safeUrl, type ResolvedAddress } from './_lib/safeUrl.js'
+import { rateLimit } from './_lib/rateLimit.js'
+import { htmlToText } from './_lib/htmlToText.js'
 
 const MAX_HTML_BYTES = 1_000_000
 const FETCH_TIMEOUT_MS = 12_000

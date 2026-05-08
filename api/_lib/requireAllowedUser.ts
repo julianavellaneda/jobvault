@@ -1,5 +1,6 @@
 import type { VercelRequest } from '@vercel/node'
-import { adminAuth, adminDb } from './firebaseAdmin'
+import type { Auth } from 'firebase-admin/auth'
+import { getAdmin } from './firebaseAdmin.js'
 
 export type AuthResult =
   | { ok: true; email: string; uid: string }
@@ -14,9 +15,17 @@ export async function requireAllowedUser(req: VercelRequest): Promise<AuthResult
   const token = raw.slice('Bearer '.length).trim()
   if (!token) return { ok: false, status: 401, error: 'missing_token' }
 
-  let decoded: Awaited<ReturnType<typeof adminAuth.verifyIdToken>>
+  let admin: { auth: Auth; db: ReturnType<typeof getAdmin>['db'] }
   try {
-    decoded = await adminAuth.verifyIdToken(token)
+    admin = getAdmin()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'admin_init_failed'
+    return { ok: false, status: 500, error: msg }
+  }
+
+  let decoded: Awaited<ReturnType<typeof admin.auth.verifyIdToken>>
+  try {
+    decoded = await admin.auth.verifyIdToken(token)
   } catch {
     return { ok: false, status: 401, error: 'invalid_token' }
   }
@@ -25,7 +34,7 @@ export async function requireAllowedUser(req: VercelRequest): Promise<AuthResult
   if (!email) return { ok: false, status: 403, error: 'no_email_in_token' }
 
   try {
-    const snap = await adminDb.doc(`allowlist/${email}`).get()
+    const snap = await admin.db.doc(`allowlist/${email}`).get()
     if (!snap.exists) return { ok: false, status: 403, error: 'not_allowlisted' }
   } catch {
     return { ok: false, status: 500, error: 'allowlist_lookup_failed' }
