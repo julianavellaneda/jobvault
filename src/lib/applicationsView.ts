@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 import type { Application, Status } from '@/types'
 import { STATUSES, STATUS_LABELS } from '@/types'
 
@@ -18,10 +17,6 @@ export interface AppGroup {
 
 const NO_SOURCE = '__none__'
 const NO_DATE = '__none__'
-
-function tsMillis(t: Timestamp | null): number | null {
-  return t ? t.toMillis() : null
-}
 
 function localYearMonth(d: Date): string {
   const y = d.getFullYear()
@@ -45,16 +40,16 @@ export function sortApps(apps: Application[], sortBy: SortBy, dir: SortDir): App
     }
     const av =
       sortBy === 'createdAt'
-        ? tsMillis(a.createdAt)
+        ? a.createdAt
         : sortBy === 'appliedAt'
-          ? tsMillis(a.appliedAt)
-          : tsMillis(a.deadline)
+          ? a.appliedAt
+          : a.deadline
     const bv =
       sortBy === 'createdAt'
-        ? tsMillis(b.createdAt)
+        ? b.createdAt
         : sortBy === 'appliedAt'
-          ? tsMillis(b.appliedAt)
-          : tsMillis(b.deadline)
+          ? b.appliedAt
+          : b.deadline
     if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
@@ -100,7 +95,7 @@ export function groupApps(apps: Application[], groupBy: GroupBy): AppGroup[] {
   // month — by createdAt year-month in the user's local timezone, newest first
   const buckets = new Map<string, Application[]>()
   for (const a of apps) {
-    const m = tsMillis(a.createdAt)
+    const m = a.createdAt
     const key = m == null ? NO_DATE : localYearMonth(new Date(m))
     const arr = buckets.get(key) ?? []
     arr.push(a)
@@ -122,9 +117,9 @@ export function groupApps(apps: Application[], groupBy: GroupBy): AppGroup[] {
 
 const SHORT_DATE_FMT = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 
-export function formatShortDate(t: Timestamp | null): string {
-  if (!t) return ''
-  return SHORT_DATE_FMT.format(t.toDate())
+export function formatShortDate(t: number | null): string {
+  if (t == null) return ''
+  return SHORT_DATE_FMT.format(new Date(t))
 }
 
 export function parseGroupBy(v: string | null): GroupBy {

@@ -4,6 +4,8 @@ A tiny private web app for dumping job-application links, working through them, 
 
 **Stack:** Vite + React 19 + React Compiler + TypeScript + Bun · Tailwind v4 · hand-rolled shadcn-style UI · Firebase (Auth + Firestore) · Vercel
 
+> **Heads up — this repo is going OSS.** It's being prepared to ship publicly under **AGPL-3.0** as a self-hostable application tracker. The Firebase backend is being replaced with **Drizzle + libSQL** (local SQLite for self-host, Turso for the hosted version), auth is becoming optional, and AI features are moving to BYO-key. The setup instructions below describe the *current* Firebase-based state — they'll be replaced once the migration lands. Full plan in [`OSS_PLAN.md`](./OSS_PLAN.md).
+
 ## Setup
 
 ### 1. Firebase project

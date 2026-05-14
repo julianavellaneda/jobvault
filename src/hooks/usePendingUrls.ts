@@ -4,11 +4,18 @@ import {
   onSnapshot,
   orderBy,
   query,
+  Timestamp,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/firebase'
 import type { ExtractedFields, PendingExtractStatus, PendingUrl, WorkArrangement } from '@/types'
+
+function tsToMs(v: unknown): number | null {
+  if (v instanceof Timestamp) return v.toMillis()
+  if (typeof v === 'number') return v
+  return null
+}
 
 function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): PendingUrl {
   const d = snap.data()
@@ -29,7 +36,7 @@ function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): PendingUrl {
     extractError: d.extractError ?? '',
     addedBy: d.addedBy ?? '',
     addedByName: d.addedByName ?? '',
-    createdAt: d.createdAt ?? null,
+    createdAt: tsToMs(d.createdAt),
   }
 }
 

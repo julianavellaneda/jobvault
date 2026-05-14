@@ -4,11 +4,18 @@ import {
   onSnapshot,
   orderBy,
   query,
+  Timestamp,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/firebase'
 import type { Application, Status, WorkArrangement } from '@/types'
+
+function tsToMs(v: unknown): number | null {
+  if (v instanceof Timestamp) return v.toMillis()
+  if (typeof v === 'number') return v
+  return null
+}
 
 function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Application {
   const d = snap.data()
@@ -24,10 +31,10 @@ function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Application {
     tags: Array.isArray(d.tags) ? d.tags : [],
     status: (d.status ?? 'pending') as Status,
     notes: d.notes ?? '',
-    deadline: d.deadline ?? null,
-    followUpDate: d.followUpDate ?? null,
-    appliedAt: d.appliedAt ?? null,
-    createdAt: d.createdAt ?? null,
+    deadline: tsToMs(d.deadline),
+    followUpDate: tsToMs(d.followUpDate),
+    appliedAt: tsToMs(d.appliedAt),
+    createdAt: tsToMs(d.createdAt),
     addedBy: d.addedBy ?? '',
     addedByName: d.addedByName ?? '',
   }

@@ -9,8 +9,8 @@ import {
   totalApplied,
 } from './stats'
 
-function ts(date: Date) {
-  return { toDate: () => date } as Application['appliedAt']
+function ts(date: Date): number {
+  return date.getTime()
 }
 
 function app(partial: Partial<Application> & { id: string; status: Status }): Application {

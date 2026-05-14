@@ -29,3 +29,9 @@ firebase-debug.log
 *.sln
 *.sw?
 .vercel
+
+# Local SQLite (self-host data dir)
+data/
+*.db
+*.db-journal
+tmp.db*

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Application, Status } from '@/types'
 import { groupApps, sortApps } from './applicationsView'
 
-function ts(date: Date) {
-  return { toMillis: () => date.getTime(), toDate: () => date } as Application['createdAt']
+function ts(date: Date): number {
+  return date.getTime()
 }
 
 function app(partial: Partial<Application> & { id: string; status: Status }): Application {

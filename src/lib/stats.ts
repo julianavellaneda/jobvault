@@ -14,11 +14,11 @@ function todayKey(): string {
 }
 
 function appliedDate(a: Application): Date | null {
-  return a.appliedAt ? a.appliedAt.toDate() : null
+  return a.appliedAt != null ? new Date(a.appliedAt) : null
 }
 
 function createdDate(a: Application): Date | null {
-  return a.createdAt ? a.createdAt.toDate() : null
+  return a.createdAt != null ? new Date(a.createdAt) : null
 }
 
 export function computeStreak(apps: Application[]): number {

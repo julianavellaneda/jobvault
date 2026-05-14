@@ -2,6 +2,19 @@
 
 Private web app for Jules to dump job-application links and track applying momentum. One primary applicant (Jules) + a few trusted collaborators (girlfriend / family) who can also add links and view stats. Trust-based: anyone in the Firestore allowlist can edit anything.
 
+## Direction (read this before any non-trivial change)
+
+This repo is being prepared to **go public as an AGPL-3.0 self-hostable OSS app**, while Jules's personal Vercel deployment keeps running with identical UX. See `OSS_PLAN.md` for the full plan. Headline shifts:
+
+- **Firebase is going away.** Target backend is **Drizzle + libSQL** — local SQLite file for self-host, Turso for the hosted Vercel deployment. Single schema either way.
+- **Storage adapter pattern.** All Firestore reads/writes will route through a `DataAdapter` interface; the libSQL implementation is the only one we'll ship.
+- **Auth becomes pluggable.** Self-host default is single-user no-auth; Google OAuth + allowlist is opt-in via env vars (Jules's site stays on OAuth).
+- **Browser-direct writes are going away.** Components currently call `updateDoc` / `writeBatch` directly. They'll move to a thin REST layer (`/api/applications/*`, `/api/pending/*`) since browsers can't talk to SQLite. Realtime `onSnapshot` becomes polling.
+- **AI is BYO-key.** `/api/extract` keeps its LLM-based field extraction but reads `AI_PROVIDER` + `AI_API_KEY` from env (OpenAI / Anthropic / MiniMax pluggable).
+- **Positioning:** "polished, self-hostable, human-in-the-loop application tracker." Explicitly **not** auto-apply / scraping / mass-application.
+
+**Until the migration is executed**, the codebase is still Firebase-coupled — the conventions below describe current reality. When planning changes, prefer designs that move in the OSS_PLAN direction (e.g. keep status/sort/group logic pure and storage-agnostic; don't deepen Firestore coupling).
+
 ## Stack
 
 - **Bun** (not npm) — `bun install`, `bun dev`, `bun run build`, `bun run lint`
@@ -49,6 +62,8 @@ Private web app for Jules to dump job-application links and track applying momen
 - Don't run the dev server in agent commands without a real `.env.local` — Firebase init will throw
 - Don't use enums, namespaces, or `import` (without `type`) for type-only symbols (TS6 will reject)
 - Don't introduce per-user lists / sharing rules — explicit decision: single shared pool, trust-based edits
+- Don't deepen Firestore coupling — it's being removed (see `OSS_PLAN.md`). New write call sites should be easy to reroute through a future `DataAdapter`.
+- Don't add features that push toward "auto-apply" / scraping / mass submission — those are explicit non-goals for the OSS direction.
 
 ## Verify before reporting done
 

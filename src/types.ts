@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
-
 export type Status = 'pending' | 'applied' | 'interview' | 'offer' | 'rejected'
 export const STATUSES: Status[] = ['pending', 'applied', 'interview', 'offer', 'rejected']
 
@@ -18,10 +16,10 @@ export interface Application {
   tags: string[]
   status: Status
   notes: string
-  deadline: Timestamp | null
-  followUpDate: Timestamp | null
-  appliedAt: Timestamp | null
-  createdAt: Timestamp | null
+  deadline: number | null
+  followUpDate: number | null
+  appliedAt: number | null
+  createdAt: number | null
   addedBy: string
   addedByName: string
 }
@@ -54,5 +52,5 @@ export interface PendingUrl {
   extractError: string
   addedBy: string
   addedByName: string
-  createdAt: Timestamp | null
+  createdAt: number | null
 }
