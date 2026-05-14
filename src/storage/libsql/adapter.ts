@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm'
 import type { Application, PendingUrl } from '@/types'
 import type { DataAdapter, NewApplication, NewPendingUrl } from '../adapter'
 import type { Db } from './client'
-import { applications, pendingUrls } from './schema'
+import { allowlist, applications, pendingUrls } from './schema'
 
 type AppRow = typeof applications.$inferSelect
 type PendingRow = typeof pendingUrls.$inferSelect
@@ -87,6 +87,11 @@ export class LibsqlDataAdapter implements DataAdapter {
     return rows.map(rowToApp)
   }
 
+  async getApplication(id: string): Promise<Application | null> {
+    const rows = await this.db.select().from(applications).where(eq(applications.id, id)).limit(1)
+    return rows[0] ? rowToApp(rows[0]) : null
+  }
+
   async createApplication(input: NewApplication): Promise<Application> {
     const row: typeof applications.$inferInsert = {
       ...input,
@@ -148,5 +153,10 @@ export class LibsqlDataAdapter implements DataAdapter {
       await tx.insert(applications).values(row)
     })
     return rowToApp(row as AppRow)
+  }
+
+  async listAllowedEmails(): Promise<string[]> {
+    const rows = await this.db.select({ email: allowlist.email }).from(allowlist)
+    return rows.map(r => r.email)
   }
 }

@@ -134,19 +134,28 @@ Per the codebase exploration, these are **storage-agnostic** and stay nearly unt
 
 ## Phased rollout
 
-### Phase 1 — Foundations (no behavior change, all on a branch)
-1. Add `@libsql/client`, `drizzle-orm`, `drizzle-kit`, remove plan to remove `firebase` (keep till phase 3)
-2. Write Drizzle schema in `src/storage/libsql/schema.ts` matching `Application` + `PendingUrl`
-3. Define `DataAdapter` / `AuthAdapter` interfaces
-4. Implement libSQL adapter + no-auth adapter (no UI wiring yet)
-5. Write `scripts/migrate-from-firebase.ts` — Firestore export → libsql insert. Dry-run against a local file.
+### Phase 1 — Foundations (no behavior change, all on a branch) ✅ DONE
+1. ✅ Add `@libsql/client`, `drizzle-orm`, `drizzle-kit`. `firebase` + `firebase-admin` kept until Phase 3.
+2. ✅ Drizzle schema in `src/storage/libsql/schema.ts` (3 tables: `applications`, `pending_urls`, `allowlist`). Initial migration generated.
+3. ✅ `DataAdapter` (`src/storage/adapter.ts`) + `AuthAdapter` (`src/auth/adapter.ts`) interfaces defined.
+4. ✅ `LibsqlDataAdapter` (`src/storage/libsql/adapter.ts`) + `NoAuthAdapter` (`src/auth/noauth.ts`) implemented. Adapter has full vitest coverage (`adapter.test.ts`). **Not wired into the UI yet** — that's Phase 3.
+5. ✅ `scripts/migrate-from-firebase.ts` authored with `--dry-run` support. Not yet executed against real Firestore (deferred to Phase 3 cutover per the migration plan).
+6. ✅ Bonus: `Application` / `PendingUrl` date fields swapped to `number | null` (epoch ms) ahead of schedule, with `tsToMs()` conversion in the Firestore-reading hooks. Writes still use `serverTimestamp()` because Firestore is still the live backend.
 
-### Phase 2 — Server-side API surface
-1. Build `/api/applications/{list,create,update,delete}` + `/api/pending/*`
-2. Build `/api/auth/{callback,me,signout}` with OAuth adapter (preserves Jules's flow)
-3. Cookie-based sessions (signed JWT or iron-session)
-4. Allowlist enforced server-side via SQL `allowlist` table
-5. Test against the migrated DB locally; UI still on Firebase at this point
+### Phase 2 — Server-side API surface ✅ DONE
+1. ✅ REST endpoints live behind a no-auth shim:
+   - `GET/POST /api/applications`
+   - `PATCH/DELETE /api/applications/[id]` — server auto-stamps `appliedAt` on status→applied
+   - `GET/POST /api/pending` (POST is bulk; hostname derived server-side)
+   - `PATCH/DELETE /api/pending/[id]`
+   - `POST /api/pending/[id]/approve` — atomic move via `approvePending`
+2. ✅ `api/_lib/requireUser.ts(req, res)`: `AUTH_MODE=none` returns synthetic local user (rejected with 503 in production unless `ALLOW_NO_AUTH=true`); `AUTH_MODE=oauth` reads iron-session and enforces allowlist (401 / 403 / 200). Auth endpoints: `api/auth/{login,callback,me,logout}.ts` — Google OAuth, sealed cookie sessions, env-then-SQL allowlist (`api/_lib/allowlist.ts`).
+3. ✅ Validation: Zod strict-parse on every write; URL fields restricted to `http:` / `https:`. Hostname is derived server-side from the URL — clients can't smuggle it.
+4. ✅ Server overwrites `addedBy` / `addedByName` from the auth user on create.
+5. ✅ Rate-limited writes via existing `rateLimit(email, ...)`.
+6. ✅ Tests: 16 new handler tests in `api/_lib/handlers.test.ts` covering auth shim, validation, auto-stamp, atomicity, 404/405. Adapter tests still pass. Smoke script at `scripts/smoke-api.sh` for end-to-end via `vercel dev`.
+7. ⏳ **Not done** (Phase 3 concern): UI still writes to Firestore. Nothing user-visible has changed yet — server side is now feature-complete.
+8. ⏳ **Deferred follow-ups (small):** GitHub OAuth provider, PKCE on the OAuth flow, admin endpoints for managing the SQL `allowlist` table.
 
 ### Phase 3 — Frontend cutover
 1. Rewrite `useApplications` / `usePendingUrls` against DataAdapter (polling)

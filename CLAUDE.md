@@ -15,6 +15,26 @@ This repo is being prepared to **go public as an AGPL-3.0 self-hostable OSS app*
 
 **Until the migration is executed**, the codebase is still Firebase-coupled — the conventions below describe current reality. When planning changes, prefer designs that move in the OSS_PLAN direction (e.g. keep status/sort/group logic pure and storage-agnostic; don't deepen Firestore coupling).
 
+### Migration progress
+
+- **Phase 1 (foundations): DONE.**
+  - Date fields on `Application` / `PendingUrl` are now `number | null` (epoch ms), not `Timestamp`. `useApplications` / `usePendingUrls` convert Firestore `Timestamp` → ms at the read boundary via a `tsToMs()` helper. Writes still use `serverTimestamp()` (intentional — Firestore is the live backend until Phase 3).
+  - New foundations exist as **dead code** (not imported by the UI): `src/storage/adapter.ts` (DataAdapter interface), `src/storage/libsql/{schema,client,adapter}.ts`, `src/auth/{adapter,noauth}.ts`, `drizzle.config.ts`, `src/storage/libsql/migrations/`, `scripts/migrate-from-firebase.ts` (supports `--dry-run`).
+  - `LibsqlDataAdapter` has full vitest coverage in `src/storage/libsql/adapter.test.ts` (per-test temp file libSQL DB; `:memory:` doesn't share state across libsql's transaction connection pool).
+  - `tsconfig.app.json` excludes `src/**/*.test.ts` so tests can use node APIs without dragging node types into the UI build.
+- **Phase 2 (server-side API surface): DONE.**
+  - Data endpoints: `api/applications/{index,[id]}.ts`, `api/pending/{index,[id]}.ts`, `api/pending/[id]/approve.ts`. All gated by `api/_lib/requireUser.ts(req, res)`.
+  - Auth endpoints: `api/auth/{login,callback,me,logout}.ts` — Google OAuth flow (no PKCE; confidential client + sealed `oauth_state` cookie). Sessions stored in iron-session sealed cookies (`app_session`, 30-day ttl). `me.ts` returns the local synthetic user when `AUTH_MODE=none` so the Phase 3 `useAuth` hook has one shape to consume.
+  - **Modes:** `AUTH_MODE=none` (default) → synthetic local user; in `VERCEL_ENV=production`/`NODE_ENV=production`, rejected with 503 unless `ALLOW_NO_AUTH=true`. `AUTH_MODE=oauth` → reads iron-session: no session = 401, session not in allowlist = 403.
+  - **Allowlist** (`api/_lib/allowlist.ts`): env `ALLOWLIST` (comma-sep) wins if set; empty value = anyone signed in. If env unset, falls back to SQL `allowlist` table via `DataAdapter.listAllowedEmails()`; empty table = anyone signed in. Case-insensitive matching. Defense in depth — both `callback.ts` and `requireUser.ts` enforce.
+  - **Session secret:** `SESSION_SECRET` must be ≥32 chars (iron-session requirement). `db.ts`'s `.env.local` fallback covers this for self-host `vercel dev` runs.
+  - URL fields run through `httpUrlSchema` (rejects javascript:, file:, data:). Hostname on pending rows is derived server-side. Server overwrites `addedBy`/`addedByName` from the authed user on create.
+  - Auto-stamp lives in `api/applications/[id].ts`: PATCH with `status:'applied'` stamps `appliedAt=Date.now()` if currently null. Once Phase 3 cuts over, the duplicated client-side rule in `ApplicationRow.tsx` + `Kanban.tsx` can be removed.
+  - Handler tests at `api/_lib/handlers.test.ts` (in-memory adapter; `./session` mocked so tests don't run real iron-session crypto). Adapter tests cover `listAllowedEmails`. Smoke: `scripts/smoke-api.sh` (no-auth path; OAuth needs a real Google client and is documented inside the script).
+  - **Runtime gotcha:** `tsc` honors the `@/*` alias from `api/tsconfig.json`, but Vercel's esbuild bundler does NOT. Type-only imports (`import type`) are erased so `@/` is safe; value imports in `api/` must use relative paths like `../../src/...js`.
+  - **Env gotcha:** when the project is linked (`.vercel/project.json` exists), `vercel dev` pulls env from the cloud and ignores `.env.local`. `db.ts` falls back to `process.loadEnvFile('.env.local')` (Node 20.6+) when `DATABASE_URL` is missing. Cloud env still wins when both are set.
+- **Phase 3 (frontend cutover):** not started. UI still writes to Firestore via `ApplicationRow`, `Kanban`, `Pending`, `AddLinks`. See `OSS_PLAN.md`.
+
 ## Stack
 
 - **Bun** (not npm) — `bun install`, `bun dev`, `bun run build`, `bun run lint`

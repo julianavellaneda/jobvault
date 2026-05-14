@@ -5,6 +5,7 @@ export type NewPendingUrl = Omit<PendingUrl, 'id' | 'createdAt'>
 
 export interface DataAdapter {
   listApplications(): Promise<Application[]>
+  getApplication(id: string): Promise<Application | null>
   createApplication(input: NewApplication): Promise<Application>
   updateApplication(id: string, patch: Partial<Application>): Promise<void>
   deleteApplication(id: string): Promise<void>
@@ -15,4 +16,6 @@ export interface DataAdapter {
   deletePendingUrl(id: string): Promise<void>
 
   approvePending(pendingId: string, application: NewApplication): Promise<Application>
+
+  listAllowedEmails(): Promise<string[]>
 }
