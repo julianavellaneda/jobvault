@@ -13,7 +13,7 @@ The current app is a Firebase-coupled personal tool for Jules + a few trusted co
 | Decision | Choice |
 |---|---|
 | Repo strategy | **Single repo, OSS-first** — current repo goes public; private Vercel keeps deploying from `main` |
-| Storage backend | **SQLite only**, drop Firebase entirely. libSQL/Turso for hosted Vercel; local file for self-host. Single Drizzle schema. |
+| Storage backend | **SQLite only**, drop Firebase entirely. `bun:sqlite` (built into Bun) for a local file. Single Drizzle schema. |
 | Auth | **Single-user no-auth by default**; optional Google/GitHub OAuth + allowlist via env for shared deployments (Jules's site stays on OAuth + allowlist) |
 | License | **AGPL-3.0** — blocks SaaS repackaging, fits the "anti-spammy-auto-apply" positioning |
 | AI features | Keep `/api/extract` (LLM-based link parsing). Make it **BYO API key** — user supplies their own OpenAI/Anthropic/MiniMax key via env. |
@@ -25,20 +25,21 @@ The current app is a Firebase-coupled personal tool for Jules + a few trusted co
 │  React UI (unchanged — pages, components, hooks signatures stable) │
 └──────────────────┬──────────────────────────┬───────────────────────┘
                    │                          │
-            ┌──────▼────────┐         ┌──────▼────────┐
-            │ data adapter  │         │ auth adapter  │
-            │  (interface)  │         │  (interface)  │
-            └──┬─────────┬──┘         └──┬─────────┬──┘
-       ┌───────▼──┐  ┌───▼─────┐    ┌────▼────┐  ┌─▼─────────┐
-       │ libSQL   │  │ SQLite  │    │ no-auth │  │ OAuth +   │
-       │ (Turso,  │  │ (local  │    │ (single │  │ allowlist │
-       │  Vercel) │  │  file)  │    │  user)  │  │ (Jules)   │
-       └──────────┘  └─────────┘    └─────────┘  └───────────┘
+                  ┌──────▼────────┐         ┌──────▼────────┐
+                  │ data adapter  │         │ auth adapter  │
+                  │  (interface)  │         │  (interface)  │
+                  └───────┬───────┘         └──┬─────────┬──┘
+                          │                    │         │
+                  ┌───────▼───────┐       ┌────▼────┐  ┌─▼─────────┐
+                  │   SQLite      │       │ no-auth │  │ OAuth +   │
+                  │ (bun:sqlite,  │       │ (single │  │ allowlist │
+                  │  local file)  │       │  user)  │  │           │
+                  └───────────────┘       └─────────┘  └───────────┘
 ```
 
-Drizzle ORM sits on top of `@libsql/client`, which speaks the same dialect to a local file *and* Turso. One schema, two `DATABASE_URL` shapes:
-- `file:./data/app.db` → local SQLite (self-host default)
-- `libsql://<db>.turso.io` + auth token → Turso (Jules's Vercel)
+Drizzle ORM sits on top of `bun:sqlite` (built into the Bun runtime). One schema, one `DATABASE_URL` shape — a local file path:
+- `file:./data/app.db` (default) or bare `./data/app.db`
+- `:memory:` is supported for tests.
 
 ## Repo layout after refactor
 
@@ -46,8 +47,8 @@ Drizzle ORM sits on top of `@libsql/client`, which speaks the same dialect to a 
 src/
   storage/
     adapter.ts            # DataAdapter interface (read sub + writes)
-    libsql/
-      client.ts           # drizzle + @libsql/client setup
+    sqlite/
+      client.ts           # drizzle + bun:sqlite setup
       schema.ts           # applications, pending_urls, allowlist tables
       adapter.ts          # implements DataAdapter against drizzle
       migrations/         # drizzle-kit generated
@@ -80,14 +81,14 @@ docs/
   SELF_HOSTING.md
   CONFIGURATION.md        # env vars, AI provider setup
 scripts/
-  migrate-from-firebase.ts # one-time export from Firestore → libsql/Turso
+  migrate-from-firebase.ts # one-time export from Firestore → local SQLite
 ```
 
 ## The hard architectural shift
 
 The current app **writes to Firestore directly from the browser** (see `ApplicationRow.tsx:33,119,210,263`, `Kanban.tsx:158`, `Pending.tsx:115,135,151`, `AddLinks.tsx:78`). That works because Firestore rules enforce auth.
 
-With SQLite/libSQL, **the browser can't talk to the DB directly** — we need a thin REST API. This is the biggest change:
+With SQLite, **the browser can't talk to the DB directly** — we need a thin REST API. This is the biggest change:
 
 - All client-side `updateDoc / deleteDoc / writeBatch` calls become `fetch('/api/applications/...')`
 - The realtime `onSnapshot` subscription becomes either:
@@ -179,14 +180,13 @@ Scope expanded mid-pass: rather than keep the Vercel deployment alive in paralle
 - More AI providers, prompt customization
 - Browser extension for one-click capture (the killer feature most OSS trackers don't have)
 - CSV import/export
-- Migration script: SQLite ↔ Turso (so self-hosters can move to/from hosted)
+- Optional libSQL/Turso backend behind a build flag (only if there's demand from operators who want managed-DB replication)
 
 ## Env var shape (new)
 
 ```bash
 # Storage
-DATABASE_URL=file:./data/app.db                 # or libsql://...turso.io
-DATABASE_AUTH_TOKEN=                            # required for Turso
+DATABASE_URL=file:./data/app.db                 # local SQLite path; file: prefix optional
 
 # Auth
 AUTH_MODE=none                                  # 'none' | 'oauth'

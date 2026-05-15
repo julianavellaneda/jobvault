@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Firestore → libSQL one-shot migration. Legacy: kept for anyone moving off
- * an existing Firestore-backed Jules tracker into the new SQLite/libSQL
- * backend. Not part of the regular runtime — `firebase-admin` is intentionally
- * not a project dependency.
+ * Firestore → SQLite one-shot migration. Legacy: kept for anyone moving off
+ * an existing Firestore-backed Jules tracker into the new SQLite backend.
+ * Not part of the regular runtime — `firebase-admin` is intentionally not a
+ * project dependency.
  *
  * Usage:
  *   bun add -d firebase-admin
@@ -18,8 +18,8 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 // @ts-expect-error firebase-admin is optional.
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { createDb } from '../../src/storage/libsql/client.ts'
-import { allowlist, applications, pendingUrls } from '../../src/storage/libsql/schema.ts'
+import { createDb } from '../../src/storage/sqlite/client.ts'
+import { allowlist, applications, pendingUrls } from '../../src/storage/sqlite/schema.ts'
 import type { ExtractedFields, PendingExtractStatus, Status, WorkArrangement } from '../../src/types.ts'
 
 const dryRun = process.argv.includes('--dry-run')
@@ -51,7 +51,7 @@ function requireMs(v: unknown, fallback = Date.now()): number {
 async function main() {
   const { db: fsDb } = getAdmin()
   const url = process.env.DATABASE_URL ?? 'file:./data/app.db'
-  const { db, client } = createDb(url, process.env.DATABASE_AUTH_TOKEN)
+  const { db, client } = await createDb(url)
 
   const appsSnap = await fsDb.collection('applications').get()
   const appRows: (typeof applications.$inferInsert)[] = appsSnap.docs.map((doc: { id: string; data: () => Record<string, unknown> }) => {
@@ -121,11 +121,11 @@ async function main() {
     return
   }
 
-  console.log('\nWriting to libSQL...')
-  await db.transaction(async tx => {
-    if (appRows.length) await tx.insert(applications).values(appRows).onConflictDoNothing()
-    if (pendRows.length) await tx.insert(pendingUrls).values(pendRows).onConflictDoNothing()
-    if (allowRows.length) await tx.insert(allowlist).values(allowRows).onConflictDoNothing()
+  console.log('\nWriting to SQLite...')
+  db.transaction(tx => {
+    if (appRows.length) tx.insert(applications).values(appRows).onConflictDoNothing().run()
+    if (pendRows.length) tx.insert(pendingUrls).values(pendRows).onConflictDoNothing().run()
+    if (allowRows.length) tx.insert(allowlist).values(allowRows).onConflictDoNothing().run()
   })
   console.log('Done.')
   client.close()

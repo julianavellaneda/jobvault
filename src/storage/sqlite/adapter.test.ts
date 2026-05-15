@@ -1,25 +1,31 @@
-import { readFile, mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Client } from '@libsql/client'
-import { createDb, type Db } from './client'
-import { LibsqlDataAdapter } from './adapter'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { SqliteDataAdapter } from './adapter'
+import * as schema from './schema'
+import type { Db } from './client'
 import type { NewApplication, NewPendingUrl } from '../adapter'
 import type { ExtractedFields } from '@/types'
+
+// Tests run under Node-based vitest, where `bun:sqlite` is unavailable.
+// `better-sqlite3` is the standard Node-side equivalent and shares Drizzle's
+// `BaseSQLiteDatabase` shape, so the adapter is exercised against an identical
+// query surface.
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const MIGRATION = resolve(__dirname, 'migrations/0000_faulty_bloodscream.sql')
 
-async function applyMigrations(client: Client) {
+async function applyMigrations(client: Database.Database) {
   const sql = await readFile(MIGRATION, 'utf8')
   const statements = sql
     .split('--> statement-breakpoint')
     .map(s => s.trim())
     .filter(Boolean)
   for (const stmt of statements) {
-    await client.execute(stmt)
+    client.exec(stmt)
   }
 }
 
@@ -66,22 +72,21 @@ function newPending(overrides: Partial<NewPendingUrl> = {}): NewPendingUrl {
   }
 }
 
-describe('LibsqlDataAdapter', () => {
+describe('SqliteDataAdapter', () => {
   let db: Db
-  let client: Client
-  let adapter: LibsqlDataAdapter
-  let tmpDir: string
+  let client: Database.Database
+  let adapter: SqliteDataAdapter
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(join(tmpdir(), 'libsql-adapter-test-'))
-    ;({ db, client } = createDb(`file:${join(tmpDir, 'app.db')}`))
+    client = new Database(':memory:')
+    client.exec('PRAGMA foreign_keys = ON;')
+    db = drizzle(client, { schema }) as unknown as Db
     await applyMigrations(client)
-    adapter = new LibsqlDataAdapter(db)
+    adapter = new SqliteDataAdapter(db)
   })
 
-  afterEach(async () => {
+  afterEach(() => {
     client.close()
-    await rm(tmpDir, { recursive: true, force: true })
   })
 
   it('create + list returns the row with assigned id and createdAt', async () => {
@@ -170,7 +175,6 @@ describe('LibsqlDataAdapter', () => {
     await expect(
       adapter.approvePending('does-not-exist', newApp()),
     ).rejects.toThrow(/pending_not_found/)
-    // no application leaked through the failed transaction
     expect(await adapter.listApplications()).toEqual([])
   })
 
@@ -179,10 +183,9 @@ describe('LibsqlDataAdapter', () => {
   })
 
   it('listAllowedEmails returns seeded rows', async () => {
-    await client.execute({
-      sql: 'insert into allowlist (email, created_at) values (?, ?), (?, ?)',
-      args: ['a@x.com', Date.now(), 'b@y.com', Date.now()],
-    })
+    client
+      .prepare('insert into allowlist (email, created_at) values (?, ?), (?, ?)')
+      .run('a@x.com', Date.now(), 'b@y.com', Date.now())
     const list = await adapter.listAllowedEmails()
     expect(list.sort()).toEqual(['a@x.com', 'b@y.com'])
   })

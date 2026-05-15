@@ -20,7 +20,7 @@ bun run start
 Open <http://localhost:3000>. On first boot:
 
 - `data/app.db` is created if missing.
-- Drizzle migrations from `src/storage/libsql/migrations/` are applied automatically.
+- Drizzle migrations from `src/storage/sqlite/migrations/` are applied automatically.
 - With the default `AUTH_MODE=none`, you sign in as a synthetic local user — no OAuth setup required.
 
 ## Configuration
@@ -34,8 +34,6 @@ All data lives in `data/app.db` (set by `DATABASE_URL=file:./data/app.db`). Back
 ```
 sqlite3 data/app.db ".backup data/app-$(date +%F).db"
 ```
-
-To move to Turso (hosted libSQL), set `DATABASE_URL=libsql://your-db.turso.io` and `DATABASE_AUTH_TOKEN=...`. The schema is identical.
 
 ## Upgrades
 

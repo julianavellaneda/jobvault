@@ -12,7 +12,7 @@ A polished, self-hostable, human-in-the-loop application tracker. Single-process
 - Tailwind v4 via `@tailwindcss/vite` (single `@import "tailwindcss"` in `src/index.css`)
 - shadcn-style UI primitives in `src/components/ui/` (Radix + cva). Add new primitives by hand; `bunx shadcn` fights the TS6 setup.
 - **Hono** on Bun for the API (`server/`). `hono/cookie` + iron-session's `sealData`/`unsealData` for sealed-cookie sessions.
-- **Drizzle ORM** + `@libsql/client`. Single schema for local SQLite files (`file:./data/app.db`) and Turso (`libsql://...turso.io`).
+- **Drizzle ORM** + `bun:sqlite` (built into the Bun runtime). Local SQLite file at `file:./data/app.db` by default; `:memory:` is supported for tests.
 - `recharts`, `@dnd-kit/core`, `sonner`, `date-fns`, `lucide-react`
 - Path alias: `@/*` → `src/*` (Vite + Vitest)
 
@@ -23,7 +23,7 @@ A polished, self-hostable, human-in-the-loop application tracker. Single-process
 `server/index.ts` is the Bun entry. It:
 1. Loads `.env.local` if present (`process.loadEnvFile`).
 2. Mounts Hono routes from `server/routes/{applications,pending,auth,extract}.ts`.
-3. Calls `getAdapter()` once at boot, which auto-applies any pending Drizzle migrations from `src/storage/libsql/migrations/` before opening the port.
+3. Calls `getAdapter()` once at boot, which auto-applies any pending Drizzle migrations from `src/storage/sqlite/migrations/` before opening the port.
 4. Serves `dist/` statically with a SPA fallback to `dist/index.html` (hash-routed pages survive refresh).
 5. Exports `{ port, fetch }` for `Bun.serve`.
 
@@ -31,7 +31,7 @@ Route handlers are thin: `requireUser(c)` → `parseBody(c, schema)` → `getAda
 
 ### Storage adapter (`src/storage/`)
 
-`DataAdapter` (`src/storage/adapter.ts`) is the interface every page consumes. `LibsqlDataAdapter` is the only implementation we ship. Browser-side consumers go through `src/storage/rest/adapter.ts` (REST → server). Tests use `server/lib/testHelpers.ts`'s in-memory adapter.
+`DataAdapter` (`src/storage/adapter.ts`) is the interface every page consumes. `SqliteDataAdapter` (`src/storage/sqlite/adapter.ts`) is the only implementation we ship. Browser-side consumers go through `src/storage/rest/adapter.ts` (REST → server). Tests use `server/lib/testHelpers.ts`'s in-memory adapter.
 
 ### Auth (`server/lib/`)
 
@@ -85,7 +85,7 @@ bun run test
 
 - `server/routes/handlers.test.ts` — Hono handler tests via `app.request()`. Mocks `server/lib/db.ts` (in-memory adapter) and `server/lib/session.ts` (skip iron-session crypto). Covers auth shim, validation, auto-stamp, atomicity, 405.
 - `server/lib/{safeUrl,htmlToText}.test.ts` — extract-helper unit tests.
-- `src/storage/libsql/adapter.test.ts` — drizzle adapter against a real per-test SQLite file (`:memory:` doesn't share state across the libsql transaction pool).
+- `src/storage/sqlite/adapter.test.ts` — drizzle adapter exercised against an in-process `better-sqlite3` `:memory:` DB (vitest runs on Node, which can't load `bun:sqlite`). The Drizzle query API is identical across drivers, so the same `SqliteDataAdapter` is tested end-to-end.
 - `src/lib/{applicationsView,stats,urls}.test.ts` — pure-function UI logic.
 - `tsconfig.app.json` excludes `src/**/*.test.ts` so node-only test code doesn't pollute the SPA build.
 

@@ -6,8 +6,7 @@ All configuration is via environment variables. For local dev, put them in `.env
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DATABASE_URL` | `file:./data/app.db` | Local SQLite file or a `libsql://...turso.io` URL. |
-| `DATABASE_AUTH_TOKEN` | _empty_ | Required only for Turso (libSQL hosted). Ignored for local files. |
+| `DATABASE_URL` | `file:./data/app.db` | Path to a local SQLite file. The `file:` prefix is optional. Use `:memory:` for an ephemeral in-process DB (testing only). |
 
 The DB is created and migrated on first boot. To wipe: stop the server, delete the file, restart.
 

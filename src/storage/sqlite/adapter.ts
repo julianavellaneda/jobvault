@@ -75,7 +75,7 @@ function pendingPatchToColumns(patch: Partial<PendingUrl>): Partial<typeof pendi
   return out
 }
 
-export class LibsqlDataAdapter implements DataAdapter {
+export class SqliteDataAdapter implements DataAdapter {
   private readonly db: Db
 
   constructor(db: Db) {
@@ -145,12 +145,16 @@ export class LibsqlDataAdapter implements DataAdapter {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
     }
-    await this.db.transaction(async tx => {
-      const result = await tx.delete(pendingUrls).where(eq(pendingUrls.id, pendingId))
-      if (result.rowsAffected === 0) {
+    this.db.transaction(tx => {
+      const deleted = tx
+        .delete(pendingUrls)
+        .where(eq(pendingUrls.id, pendingId))
+        .returning({ id: pendingUrls.id })
+        .all()
+      if (deleted.length === 0) {
         throw new Error(`pending_not_found: ${pendingId}`)
       }
-      await tx.insert(applications).values(row)
+      tx.insert(applications).values(row).run()
     })
     return rowToApp(row as AppRow)
   }
