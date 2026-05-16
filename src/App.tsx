@@ -11,6 +11,7 @@ import { Applications } from '@/pages/Applications'
 import { Kanban } from '@/pages/Kanban'
 import { AddLinks } from '@/pages/AddLinks'
 import { Pending } from '@/pages/Pending'
+import { Settings } from '@/pages/Settings'
 
 function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -25,7 +26,7 @@ function useDarkMode() {
   return [dark, () => setDark(d => !d)] as const
 }
 
-const KNOWN_VIEWS: View[] = ['dashboard', 'applications', 'kanban', 'pending', 'add']
+const KNOWN_VIEWS: View[] = ['dashboard', 'applications', 'kanban', 'pending', 'add', 'settings']
 
 function useView() {
   const [view, setView] = useState<View>(() => {
@@ -74,6 +75,8 @@ function AppShell({
         />
       ) : view === 'kanban' ? (
         <Kanban apps={appsApi.apps} updateApp={appsApi.update} />
+      ) : view === 'settings' ? (
+        <Settings />
       ) : view === 'pending' ? (
         <Pending
           pending={pendingApi.pending}

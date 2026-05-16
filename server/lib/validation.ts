@@ -82,6 +82,35 @@ export const newPendingUrlSchema = z.object({
 export const MAX_PENDING_BATCH = 200
 export const newPendingUrlsSchema = z.array(newPendingUrlSchema).max(MAX_PENDING_BATCH)
 
+const aiProvider = z.enum([
+  'openai',
+  'anthropic',
+  'google',
+  'minimax',
+  'openrouter',
+  'openai-compatible',
+])
+
+export const aiSettingsPatchSchema = z
+  .object({
+    provider: aiProvider,
+    apiKey: z.string().max(500),
+    model: z.string().max(200),
+    baseUrl: z.string().max(500),
+  })
+  .partial()
+  .strict()
+
+export const aiTestSchema = z
+  .object({
+    provider: aiProvider,
+    apiKey: z.string().max(500),
+    model: z.string().max(200),
+    baseUrl: z.string().max(500),
+  })
+  .partial()
+  .strict()
+
 export const pendingPatchSchema = z.object({
   url: httpUrlSchema,
   extraction,

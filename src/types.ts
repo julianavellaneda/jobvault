@@ -32,6 +32,31 @@ export const STATUS_LABELS: Record<Status, string> = {
   rejected: 'Rejected',
 }
 
+export type AiProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'minimax'
+  | 'openrouter'
+  | 'openai-compatible'
+
+export const AI_PROVIDER_IDS: AiProviderId[] = [
+  'openai',
+  'anthropic',
+  'google',
+  'minimax',
+  'openrouter',
+  'openai-compatible',
+]
+
+export interface AiSettingsRow {
+  provider: AiProviderId
+  apiKey: string
+  model: string
+  baseUrl: string
+  updatedAt: number
+}
+
 export type PendingExtractStatus = 'idle' | 'loading' | 'done' | 'error'
 
 export type ExtractedFields = {

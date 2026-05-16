@@ -1,5 +1,11 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
-import type { ExtractedFields, PendingExtractStatus, Status, WorkArrangement } from '@/types'
+import type {
+  AiProviderId,
+  ExtractedFields,
+  PendingExtractStatus,
+  Status,
+  WorkArrangement,
+} from '@/types'
 
 export const applications = sqliteTable('applications', {
   id: text('id').primaryKey(),
@@ -36,4 +42,16 @@ export const pendingUrls = sqliteTable('pending_urls', {
 export const allowlist = sqliteTable('allowlist', {
   email: text('email').primaryKey(),
   createdAt: integer('created_at').notNull(),
+})
+
+// Single-row table: id is always 'singleton'. Holds the in-app AI provider
+// config used only as a fallback when no AI_* env vars are set (see
+// server/lib/aiConfig.ts — env always wins, mirroring allowlist policy).
+export const aiSettings = sqliteTable('ai_settings', {
+  id: text('id').primaryKey(),
+  provider: text('provider').$type<AiProviderId>().notNull().default('minimax'),
+  apiKey: text('api_key').notNull().default(''),
+  model: text('model').notNull().default(''),
+  baseUrl: text('base_url').notNull().default(''),
+  updatedAt: integer('updated_at').notNull(),
 })

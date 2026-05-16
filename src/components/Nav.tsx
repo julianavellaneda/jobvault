@@ -3,7 +3,7 @@ import type { StoredUser } from '@/auth/adapter'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type View = 'dashboard' | 'applications' | 'kanban' | 'pending' | 'add'
+export type View = 'dashboard' | 'applications' | 'kanban' | 'pending' | 'add' | 'settings'
 
 const TABS: { id: View; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -11,6 +11,7 @@ const TABS: { id: View; label: string }[] = [
   { id: 'kanban', label: 'Kanban' },
   { id: 'pending', label: 'Pending' },
   { id: 'add', label: 'Add Links' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 export function Nav({

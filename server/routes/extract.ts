@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { generateText } from 'ai'
-import { minimax } from 'vercel-minimax-ai-provider'
 import { requireUser } from '../lib/requireUser.ts'
 import { safeUrl } from '../lib/safeUrl.ts'
 import { rateLimit } from '../lib/rateLimit.ts'
 import { htmlToText } from '../lib/htmlToText.ts'
+import { getAdapter } from '../lib/db.ts'
+import { AI_PROVIDERS } from '../lib/aiProviders.ts'
+import { resolveAiConfig } from '../lib/aiConfig.ts'
 
 const MAX_HTML_BYTES = 1_000_000
 const FETCH_TIMEOUT_MS = 12_000
@@ -128,17 +130,21 @@ const SYSTEM_PROMPT =
   '- Use "" (empty string) for any unknown field. Do NOT guess. ' +
   'Example output: {"company":"Acme Corp","role":"Software Engineer","salary":"$120k-$150k","location":"New York, NY","workArrangement":"hybrid","source":"Greenhouse"}'
 
-async function callMinimax(
+async function callModel(
   url: string,
   text: string,
 ): Promise<{ ok: true; extracted: ExtractedFields } | { ok: false; error: string }> {
-  if (!process.env.MINIMAX_API_KEY) return { ok: false, error: 'missing_MINIMAX_API_KEY' }
-  const modelId = process.env.MINIMAX_MODEL || 'MiniMax-M2.5'
+  const resolved = await resolveAiConfig(await getAdapter())
+  if (resolved.source === 'none' || !resolved.ready) {
+    return { ok: false, error: 'ai_not_configured' }
+  }
+  const meta = AI_PROVIDERS[resolved.config.provider]
 
   let result: Awaited<ReturnType<typeof generateText>>
   try {
+    const model = await meta.createModel(resolved.config)
     result = await generateText({
-      model: minimax(modelId),
+      model,
       system: SYSTEM_PROMPT,
       prompt: `URL: ${url}\n\nPAGE CONTENT:\n${text}\n\nReturn the JSON object now.`,
       temperature: 0.1,
@@ -218,7 +224,7 @@ app.post('/', async c => {
   }
   console.log('[extract] page text length:', page.text.length)
 
-  const llm = await callMinimax(url, page.text)
+  const llm = await callModel(url, page.text)
   if (!llm.ok) {
     console.error('[extract] LLM failed:', llm.error)
     return c.json({ error: llm.error })

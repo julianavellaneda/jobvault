@@ -6,6 +6,7 @@ import applications from './routes/applications.ts'
 import pending from './routes/pending.ts'
 import auth from './routes/auth.ts'
 import extract from './routes/extract.ts'
+import settings from './routes/settings.ts'
 import { getAdapter } from './lib/db.ts'
 
 function loadEnv(): void {
@@ -27,6 +28,7 @@ app.route('/api/applications', applications)
 app.route('/api/pending', pending)
 app.route('/api/auth', auth)
 app.route('/api/extract', extract)
+app.route('/api/settings', settings)
 
 app.notFound(c => {
   if (c.req.path.startsWith('/api/')) {

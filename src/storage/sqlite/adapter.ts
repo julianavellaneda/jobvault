@@ -1,8 +1,10 @@
 import { desc, eq } from 'drizzle-orm'
-import type { Application, PendingUrl } from '@/types'
+import type { AiSettingsRow, Application, PendingUrl } from '@/types'
 import type { DataAdapter, NewApplication, NewPendingUrl } from '../adapter'
 import type { Db } from './client'
-import { allowlist, applications, pendingUrls } from './schema'
+import { aiSettings, allowlist, applications, pendingUrls } from './schema'
+
+const AI_SETTINGS_ID = 'singleton'
 
 type AppRow = typeof applications.$inferSelect
 type PendingRow = typeof pendingUrls.$inferSelect
@@ -162,5 +164,38 @@ export class SqliteDataAdapter implements DataAdapter {
   async listAllowedEmails(): Promise<string[]> {
     const rows = await this.db.select({ email: allowlist.email }).from(allowlist)
     return rows.map(r => r.email)
+  }
+
+  async getAiSettings(): Promise<AiSettingsRow | null> {
+    const rows = await this.db
+      .select()
+      .from(aiSettings)
+      .where(eq(aiSettings.id, AI_SETTINGS_ID))
+      .limit(1)
+    const r = rows[0]
+    if (!r) return null
+    return {
+      provider: r.provider,
+      apiKey: r.apiKey,
+      model: r.model,
+      baseUrl: r.baseUrl,
+      updatedAt: r.updatedAt,
+    }
+  }
+
+  async setAiSettings(patch: Partial<Omit<AiSettingsRow, 'updatedAt'>>): Promise<void> {
+    const cols: Partial<typeof aiSettings.$inferInsert> = {}
+    if (patch.provider !== undefined) cols.provider = patch.provider
+    if (patch.apiKey !== undefined) cols.apiKey = patch.apiKey
+    if (patch.model !== undefined) cols.model = patch.model
+    if (patch.baseUrl !== undefined) cols.baseUrl = patch.baseUrl
+    const updatedAt = Date.now()
+    await this.db
+      .insert(aiSettings)
+      .values({ id: AI_SETTINGS_ID, ...cols, updatedAt })
+      .onConflictDoUpdate({
+        target: aiSettings.id,
+        set: { ...cols, updatedAt },
+      })
   }
 }

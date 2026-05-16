@@ -41,6 +41,10 @@ Route handlers are thin: `requireUser(c)` → `parseBody(c, schema)` → `getAda
 
 Allowlist policy in `server/lib/allowlist.ts`: env `ALLOWLIST` wins (empty = anyone signed in); else SQL `allowlist` table (empty = anyone signed in). Case-insensitive.
 
+### AI providers (`server/lib/aiProviders.ts` + `aiConfig.ts`)
+
+`AI_PROVIDERS` registry is the single integration point (OpenAI, Anthropic, Google, MiniMax, OpenRouter, generic OpenAI-compatible). `resolveAiConfig()` follows the **same env-wins / DB-fallback policy as `allowlist.ts`**: `AI_PROVIDER` (or legacy bare `MINIMAX_API_KEY`) env wins; otherwise the single-row `ai_settings` table set via the Settings page. Both `routes/extract.ts` and `routes/settings.ts` (`/api/settings/ai{,/test}`) go through the registry. Keys are plaintext in `data/app.db` (trust model) and **never returned to the browser** — only a masked `••••last4` preview. See `docs/AI_PROVIDERS.md`.
+
 ### Frontend (`src/`)
 
 - **One Drizzle schema, two reads**: `useApplications` / `usePendingUrls` poll `GET /api/applications` and `GET /api/pending` every 5s, pause while `document.hidden`. Writes are optimistic with per-row rollback + `toast.error` on failure. Don't snapshot the whole array for rollback — splice the affected row back in by id (or original index for removals/approves) so concurrent edits, new rows, and polled changes don't get wiped.
@@ -112,4 +116,5 @@ All three must pass with no errors.
 - **Phase 1** (foundations): adapters + drizzle schema + libSQL client landed as dead code; date fields swapped from Firestore `Timestamp` to `number | null` ms.
 - **Phase 2** (REST surface): Vercel-shape API routes + Google OAuth + iron-session + env/SQL allowlist.
 - **Phase 3** (frontend cutover): UI switched to REST polling + optimistic writes; Firebase kept alive only for the migration script.
-- **Phase 4** (OSS migration, current): Firestore data exported to local SQLite; Vercel + Firebase code deleted; Hono-on-Bun server replaces `api/`; LICENSE/README/docs/Docker/CI shipped. Repo is OSS-ready.
+- **Phase 4** (OSS migration): Firestore data exported to local SQLite; Vercel + Firebase code deleted; Hono-on-Bun server replaces `api/`; LICENSE/README/docs/Docker/CI shipped. Repo is OSS-ready.
+- **Phase 5** (multi-provider AI, current): `AI_PROVIDERS` registry + `resolveAiConfig` (env-wins/DB-fallback); `ai_settings` table (migration `0001`); `/api/settings/ai` routes; in-app **Settings** page with provider/model/key + Test connection. OpenAI/Anthropic/Google/OpenRouter/OpenAI-compatible added alongside MiniMax; legacy `MINIMAX_API_KEY` still works.

@@ -1,4 +1,4 @@
-import type { Application, PendingUrl } from '@/types'
+import type { AiSettingsRow, Application, PendingUrl } from '@/types'
 
 export type NewApplication = Omit<Application, 'id' | 'createdAt'>
 export type NewPendingUrl = Omit<PendingUrl, 'id' | 'createdAt'>
@@ -18,4 +18,7 @@ export interface DataAdapter {
   approvePending(pendingId: string, application: NewApplication): Promise<Application>
 
   listAllowedEmails(): Promise<string[]>
+
+  getAiSettings(): Promise<AiSettingsRow | null>
+  setAiSettings(patch: Partial<Omit<AiSettingsRow, 'updatedAt'>>): Promise<void>
 }

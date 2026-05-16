@@ -30,6 +30,9 @@ firebase-debug.log
 *.sw?
 .vercel
 
+# Local Claude Code settings (machine-specific permissions / plugin overrides)
+.claude/settings.local.json
+
 # Local SQLite (self-host data dir)
 data/
 *.db

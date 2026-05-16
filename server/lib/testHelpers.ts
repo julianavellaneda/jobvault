@@ -1,4 +1,4 @@
-import type { Application, PendingUrl } from '@/types'
+import type { AiSettingsRow, Application, PendingUrl } from '@/types'
 import type { DataAdapter, NewApplication, NewPendingUrl } from '@/storage/adapter'
 
 let nextId = 1
@@ -11,6 +11,7 @@ export function memoryAdapter(initial: { allowedEmails?: string[] } = {}): DataA
   const apps: Application[] = []
   const pendings: PendingUrl[] = []
   const allowedEmails = (initial.allowedEmails ?? []).slice()
+  let aiSettings: AiSettingsRow | null = null
 
   return {
     async listApplications() {
@@ -60,6 +61,19 @@ export function memoryAdapter(initial: { allowedEmails?: string[] } = {}): DataA
     },
     async listAllowedEmails() {
       return allowedEmails.slice()
+    },
+    async getAiSettings() {
+      return aiSettings ? { ...aiSettings } : null
+    },
+    async setAiSettings(patch) {
+      const base: AiSettingsRow = aiSettings ?? {
+        provider: 'minimax',
+        apiKey: '',
+        model: '',
+        baseUrl: '',
+        updatedAt: 0,
+      }
+      aiSettings = { ...base, ...patch, updatedAt: Date.now() }
     },
   }
 }

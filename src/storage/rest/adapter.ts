@@ -1,4 +1,4 @@
-import type { Application, PendingUrl } from '@/types'
+import type { AiSettingsRow, Application, PendingUrl } from '@/types'
 import type { DataAdapter, NewApplication, NewPendingUrl } from '../adapter'
 import { apiFetch } from './client'
 
@@ -61,6 +61,16 @@ export class RestDataAdapter implements DataAdapter {
 
   async listAllowedEmails(): Promise<string[]> {
     throw new Error('listAllowedEmails is server-only')
+  }
+
+  // AI settings flow through the dedicated /api/settings/* endpoints
+  // (src/lib/aiSettings.ts), not the storage adapter.
+  async getAiSettings(): Promise<AiSettingsRow | null> {
+    throw new Error('getAiSettings is server-only')
+  }
+
+  async setAiSettings(): Promise<void> {
+    throw new Error('setAiSettings is server-only')
   }
 }
 

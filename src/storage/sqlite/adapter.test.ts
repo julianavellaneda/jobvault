@@ -16,16 +16,21 @@ import type { ExtractedFields } from '@/types'
 // query surface.
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const MIGRATION = resolve(__dirname, 'migrations/0000_faulty_bloodscream.sql')
+const MIGRATIONS = [
+  resolve(__dirname, 'migrations/0000_faulty_bloodscream.sql'),
+  resolve(__dirname, 'migrations/0001_acoustic_corsair.sql'),
+]
 
 async function applyMigrations(client: Database.Database) {
-  const sql = await readFile(MIGRATION, 'utf8')
-  const statements = sql
-    .split('--> statement-breakpoint')
-    .map(s => s.trim())
-    .filter(Boolean)
-  for (const stmt of statements) {
-    client.exec(stmt)
+  for (const file of MIGRATIONS) {
+    const sql = await readFile(file, 'utf8')
+    const statements = sql
+      .split('--> statement-breakpoint')
+      .map(s => s.trim())
+      .filter(Boolean)
+    for (const stmt of statements) {
+      client.exec(stmt)
+    }
   }
 }
 
@@ -197,5 +202,30 @@ describe('SqliteDataAdapter', () => {
     await expect(adapter.approvePending(pending.id, newApp())).rejects.toThrow(/pending_not_found/)
 
     expect(await adapter.listApplications()).toHaveLength(1)
+  })
+
+  it('getAiSettings returns null until set, then upserts a single row', async () => {
+    expect(await adapter.getAiSettings()).toBeNull()
+
+    await adapter.setAiSettings({ provider: 'openai', apiKey: 'sk-abc', model: 'gpt-4o-mini' })
+    const first = await adapter.getAiSettings()
+    expect(first).toMatchObject({
+      provider: 'openai',
+      apiKey: 'sk-abc',
+      model: 'gpt-4o-mini',
+      baseUrl: '',
+    })
+    expect(first?.updatedAt).toBeGreaterThan(0)
+
+    // Second call upserts (does not insert a new row) and merges columns.
+    await adapter.setAiSettings({ provider: 'anthropic' })
+    const second = await adapter.getAiSettings()
+    expect(second).toMatchObject({
+      provider: 'anthropic',
+      apiKey: 'sk-abc',
+      model: 'gpt-4o-mini',
+    })
+    const rows = client.prepare('select count(*) as n from ai_settings').get() as { n: number }
+    expect(rows.n).toBe(1)
   })
 })
