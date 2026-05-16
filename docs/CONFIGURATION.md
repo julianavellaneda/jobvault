@@ -43,13 +43,25 @@ The DB is created and migrated on first boot. To wipe: stop the server, delete t
 
 ## AI extraction
 
-See [AI_PROVIDERS.md](AI_PROVIDERS.md) for details. The extract endpoint degrades gracefully when no key is set — the UI just skips the prefill.
+Pluggable: OpenAI, Anthropic, Google, MiniMax, OpenRouter, or any OpenAI-compatible
+endpoint. **Env wins over the in-app Settings page** (same policy as `ALLOWLIST`);
+leave all of this unset to configure provider/model/key from the UI instead. The
+extract endpoint degrades gracefully when nothing is configured — the UI just
+skips the prefill. See [AI_PROVIDERS.md](AI_PROVIDERS.md) for the full matrix.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `MINIMAX_API_KEY` | _empty_ | MiniMax API key. When absent, `/api/extract` returns `{error:"missing_MINIMAX_API_KEY"}` and the UI continues without prefill. |
-| `MINIMAX_MODEL` | `MiniMax-M2.5` | Model id. |
-| `MINIMAX_BASE_URL` | provider default | Override only if you self-host an inference endpoint. |
+| `AI_PROVIDER` | _unset_ | `openai` \| `anthropic` \| `google` \| `minimax` \| `openrouter` \| `openai-compatible`. Unset = configure from the Settings page. |
+| `AI_MODEL` | provider default | Model id (e.g. `gpt-4o-mini`). Blank uses the provider's default. |
+| `AI_BASE_URL` | provider default | Required **only** for `openai-compatible` (Ollama / LM Studio / vLLM). Ignored by hosted providers. |
+| `OPENAI_API_KEY` | _empty_ | Key for `AI_PROVIDER=openai`. |
+| `ANTHROPIC_API_KEY` | _empty_ | Key for `AI_PROVIDER=anthropic`. |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | _empty_ | Key for `AI_PROVIDER=google`. |
+| `OPENROUTER_API_KEY` | _empty_ | Key for `AI_PROVIDER=openrouter`. |
+| `AI_API_KEY` | _empty_ | Key for `AI_PROVIDER=openai-compatible` (often unused for local models). |
+| `MINIMAX_API_KEY` | _empty_ | Back-compat: setting just this (no `AI_PROVIDER`) still selects MiniMax. |
+| `MINIMAX_MODEL` | `MiniMax-M2.5` | MiniMax model id. |
+| `MINIMAX_BASE_URL` | provider default | Override only if you proxy MiniMax. |
 
 ## Server
 

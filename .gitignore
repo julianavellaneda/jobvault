@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.local
 .firebase
+.firebaserc
 firebase-debug.log
 
 # Editor directories and files

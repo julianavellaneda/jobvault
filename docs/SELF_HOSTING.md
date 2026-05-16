@@ -10,7 +10,7 @@ This app is designed to run as a single Bun process serving both the React SPA a
 ## Install
 
 ```
-git clone <repo-url> jules-application-tracker
+git clone https://github.com/Mclovin0213/jules-application-tracker.git
 cd jules-application-tracker
 bun install
 bun run build
@@ -57,11 +57,45 @@ For anything beyond a localhost-only personal install:
 
 ## Docker
 
+The shipped `docker-compose.yml` pulls a prebuilt multi-arch image (amd64 + arm64) from GHCR:
+
 ```
-docker compose up --build
+docker compose up -d
 ```
 
-Single container, listens on `:3000`, persists to `./data` via a bind mount. Edit `.env.local` and `docker-compose.yml` (or pass env vars directly) to enable OAuth.
+Single container, listens on `:3000`, persists to `./data` via a bind mount. To build from source instead, comment the `image:` line and uncomment `build: .` in `docker-compose.yml`. Set env vars in a `.env` file next to the compose file (or in your orchestrator) to enable OAuth and/or AI extraction — see [CONFIGURATION.md](CONFIGURATION.md).
+
+The container ships a `HEALTHCHECK` (Docker/Portainer/Watchtower will report health). Image tags follow SemVer (`v1.2.3`, `1.2`, `latest`) so Watchtower/Renovate can track updates.
+
+## Behind a reverse proxy (TLS)
+
+Bun serves plain HTTP; terminate TLS upstream. Set `PUBLIC_BASE_URL` to the public origin so OAuth redirects are built correctly.
+
+**Caddy** (auto HTTPS via Let's Encrypt):
+
+```
+tracker.example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+**nginx:**
+
+```
+server {
+    listen 443 ssl;
+    server_name tracker.example.com;
+    # ssl_certificate / ssl_certificate_key ...
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Then run with `PUBLIC_BASE_URL=https://tracker.example.com`.
 
 ## Migrating from an existing Firestore-backed instance
 

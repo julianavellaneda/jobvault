@@ -1,13 +1,50 @@
 # Jules Application Tracker
 
+[![CI](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/docker-publish.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![GHCR image](https://img.shields.io/badge/ghcr.io-jules--application--tracker-2496ED?logo=docker&logoColor=white)](https://github.com/Mclovin0213/jules-application-tracker/pkgs/container/jules-application-tracker)
+
 A polished, **self-hostable**, human-in-the-loop job-application tracker. Paste links, work through them, track momentum. **Explicitly not** auto-apply, scraping, or mass-submission — those are non-goals.
 
-**Stack:** Vite + React 19 + React Compiler + TypeScript · Tailwind v4 · shadcn-style UI · Hono on Bun · Drizzle ORM · `bun:sqlite` · AGPL-3.0
+**Stack:** Vite + React 19 + React Compiler + TypeScript · Tailwind v4 · shadcn-style UI · Hono on Bun · Drizzle ORM · `bun:sqlite` · AGPL-3.0. Single process, one SQLite file, no external services required. Typically <50 MB RAM.
 
-## 30-second quickstart
+## Screenshots
+
+<!-- Drop PNGs in docs/screenshots/ and update these paths. A 10–30s demo GIF of
+     adding a link → triaging → moving it across the Kanban converts best. -->
+
+| Dashboard | Applications | Kanban |
+|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Applications](docs/screenshots/applications.png) | ![Kanban](docs/screenshots/kanban.png) |
+
+## Quickstart — Docker (recommended)
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    image: ghcr.io/mclovin0213/jules-application-tracker:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data        # SQLite lives here — back this up
+    environment:
+      AUTH_MODE: none           # single-user, no login
+      ALLOW_NO_AUTH: "true"     # required for no-auth in production
+    restart: unless-stopped
+```
 
 ```
-git clone <repo-url> jules-application-tracker
+docker compose up -d
+```
+
+Open <http://localhost:3000>. The DB is created and migrated on first boot. For a shared deployment, switch on Google OAuth — see [Self-hosting](docs/SELF_HOSTING.md).
+
+## Quickstart — from source
+
+```
+git clone https://github.com/Mclovin0213/jules-application-tracker.git
 cd jules-application-tracker
 bun install
 bun run build
@@ -28,7 +65,7 @@ Vite proxies `/api/*` to the Bun server, so you can use either port during dev.
 ## Features
 
 - **Bulk paste** — drop a list of job URLs and the server validates + dedupes.
-- **AI extraction (BYO key)** — `/api/extract` pulls company / role / salary / location from a posting. MiniMax provider wired today; see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
+- **AI extraction (BYO key)** — `/api/extract` pulls company / role / salary / location from a posting. Pluggable providers: **OpenAI, Anthropic, Google, MiniMax, OpenRouter, or any OpenAI-compatible endpoint** (Ollama / LM Studio / vLLM). Configure via env or the in-app **Settings** page; keys never leave your DB. See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
 - **Kanban** with drag-and-drop status changes; status flip to *applied* auto-stamps `appliedAt`.
 - **Applications grid** with search, chip filters, group-by (status / source / month-added), sort-by (date added / applied / deadline / company). Two-tier rows: compact-by-default, click to expand for inline edits.
 - **Pending queue** to triage before promoting to a tracked application.
@@ -37,9 +74,10 @@ Vite proxies `/api/*` to the Bun server, so you can use either port during dev.
 
 ## Documentation
 
-- [Self-hosting](docs/SELF_HOSTING.md) — install, persistence, upgrade, production checklist.
+- [Self-hosting](docs/SELF_HOSTING.md) — install, persistence, upgrade, reverse proxy, production checklist.
 - [Configuration](docs/CONFIGURATION.md) — every env var explained.
 - [AI providers](docs/AI_PROVIDERS.md) — wiring extraction, BYO-key model.
+- [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
 ## Non-goals
 

@@ -16,4 +16,9 @@ COPY --from=builder /app/package.json ./package.json
 RUN mkdir -p /app/data
 VOLUME /app/data
 EXPOSE 3000
+# Liveness: the SPA index is served unauthenticated once dist/ is present,
+# so a 2xx here means the Bun process is up and serving. Uses bun's fetch
+# so we don't depend on curl/wget being in the slim image.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD bun -e "fetch('http://localhost:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["bun", "run", "server/index.ts"]

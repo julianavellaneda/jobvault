@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    # Prebuilt multi-arch image (amd64 + arm64), published on tag.
+    # To build locally instead, comment `image:` and uncomment `build: .`.
+    image: ghcr.io/mclovin0213/jules-application-tracker:latest
+    # build: .
     ports:
       - "3000:3000"
     volumes:
@@ -8,12 +11,40 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/app.db
+      PORT: ${PORT:-3000}
+
+      # ── Auth ──────────────────────────────────────────────────────────
+      # AUTH_MODE=none in production requires ALLOW_NO_AUTH=true (fail-closed).
       AUTH_MODE: ${AUTH_MODE:-none}
       ALLOW_NO_AUTH: ${ALLOW_NO_AUTH:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
+      OAUTH_PROVIDER: ${OAUTH_PROVIDER:-google}
       OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
       OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:-}
       ALLOWLIST: ${ALLOWLIST:-}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+
+      # ── AI extraction (optional, BYO key) ─────────────────────────────
+      # Env wins over the in-app Settings page. Leave unset to configure
+      # the provider/model/key from the UI instead. See docs/AI_PROVIDERS.md.
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      # Back-compat: bare MINIMAX_API_KEY still works with no AI_PROVIDER.
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://localhost:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
