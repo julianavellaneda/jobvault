@@ -1,7 +1,12 @@
 FROM oven/bun:1 AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+# --ignore-scripts: better-sqlite3 is a Node/Vitest-only devDependency whose
+# node-gyp postinstall needs Python (absent from oven/bun). It is imported
+# nowhere in the image — runtime uses bun:sqlite, the build excludes *.test.ts.
+# esbuild resolves its native binary from its optional platform package, not
+# its postinstall, so the Vite build is unaffected.
+RUN bun install --frozen-lockfile --ignore-scripts
 COPY . .
 RUN bun run build
 

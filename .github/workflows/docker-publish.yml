@@ -38,11 +38,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Triggers are only `v*` tags + manual dispatch (which runs on the
+          # default branch), so tagging `latest` on every run is correct.
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest
 
       - name: Build and push (amd64 + arm64)
         uses: docker/build-push-action@v6
