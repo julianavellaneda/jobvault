@@ -24,6 +24,10 @@ Configuration is resolved with an **env-wins, DB-fallback** policy — the same 
 
 Common cross-provider env vars: `AI_MODEL` (blank = provider default) and `AI_BASE_URL` (required only for `openai-compatible`).
 
+> **Base URL scope:** `AI_BASE_URL` / the Settings "Base URL" field only applies to `openai-compatible` (and, via env only, MiniMax's regional endpoint). The hosted providers (OpenAI/Anthropic/Google/OpenRouter) ignore a custom base URL entirely — this prevents a stale local endpoint from leaking into a hosted provider after switching providers in the UI.
+
+> **Model required without a default:** `openai-compatible` has no default model, so a model id is mandatory — the connection won't be reported "ready" (and `/api/extract` won't run) until one is set.
+
 ### Running a local model (no cloud, no key)
 
 Point the `openai-compatible` provider at a local OpenAI-compatible server — great for a homelab/RPi where you don't want to send postings to a cloud API:
@@ -44,6 +48,8 @@ Keys set via the Settings page are stored **in plaintext** in the single-row `ai
 > ⚠️ **Keep `data/` out of git and out of any shared backups.** A committed or leaked `app.db` exposes the key. The repo's `.gitignore` already excludes `data/`. If you prefer keys never touch the database, use the environment-variable path instead.
 
 The key is **never returned to the browser** — `GET /api/settings/ai` only exposes a masked preview (`••••last4`).
+
+When you switch providers in the Settings page without entering a new key, the previous provider's key is **dropped** rather than silently reused under the new provider — re-enter (or leave blank for keyless local endpoints) before saving.
 
 ## Graceful degradation
 

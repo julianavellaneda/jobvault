@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { getAdapter } from '../lib/db.ts'
 import { requireUser } from '../lib/requireUser.ts'
-import { rateLimit } from '../lib/rateLimit.ts'
 import { parseBody } from '../lib/parseBody.ts'
 import {
   hostnameOf,
@@ -22,11 +21,6 @@ app.get('/', async c => {
 app.post('/', async c => {
   const auth = await requireUser(c)
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
-  const limit = rateLimit(auth.user.email)
-  if (!limit.ok) {
-    c.header('Retry-After', String(limit.retryAfterSec))
-    return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
-  }
   const parsed = await parseBody(c, newPendingUrlsSchema)
   if (!parsed.ok) return parsed.response
   const stamped = parsed.data.map(p => ({
@@ -43,11 +37,6 @@ app.patch('/:id', async c => {
   const auth = await requireUser(c)
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
   const id = c.req.param('id')
-  const limit = rateLimit(auth.user.email)
-  if (!limit.ok) {
-    c.header('Retry-After', String(limit.retryAfterSec))
-    return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
-  }
   const parsed = await parseBody(c, pendingPatchSchema)
   if (!parsed.ok) return parsed.response
   const patch = parsed.data
@@ -64,11 +53,6 @@ app.delete('/:id', async c => {
   const auth = await requireUser(c)
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
   const id = c.req.param('id')
-  const limit = rateLimit(auth.user.email)
-  if (!limit.ok) {
-    c.header('Retry-After', String(limit.retryAfterSec))
-    return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
-  }
   await (await getAdapter()).deletePendingUrl(id)
   return c.body(null, 204)
 })
@@ -77,11 +61,6 @@ app.post('/:id/approve', async c => {
   const auth = await requireUser(c)
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
   const id = c.req.param('id')
-  const limit = rateLimit(auth.user.email)
-  if (!limit.ok) {
-    c.header('Retry-After', String(limit.retryAfterSec))
-    return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
-  }
   const parsed = await parseBody(c, newApplicationSchema)
   if (!parsed.ok) return parsed.response
   const body = parsed.data

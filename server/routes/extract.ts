@@ -196,7 +196,12 @@ app.post('/', async c => {
   const auth = await requireUser(c)
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
 
-  const limit = rateLimit(auth.user.email)
+  // Scope to the extract endpoint only. This is the sole rate-limited route:
+  // it does an outbound page fetch + a paid LLM call (the real abuse vector).
+  // Pending CRUD is cheap local SQLite bookkeeping and must NOT share this
+  // budget, or normal use (~1 + 3 writes per link) exhausts 20/5min after a
+  // handful of links and wedges rows on "extracting".
+  const limit = rateLimit(`extract:${auth.user.email}`)
   if (!limit.ok) {
     c.header('Retry-After', String(limit.retryAfterSec))
     return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)

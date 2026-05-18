@@ -43,7 +43,7 @@ Allowlist policy in `server/lib/allowlist.ts`: env `ALLOWLIST` wins (empty = any
 
 ### AI providers (`server/lib/aiProviders.ts` + `aiConfig.ts`)
 
-`AI_PROVIDERS` registry is the single integration point (OpenAI, Anthropic, Google, MiniMax, OpenRouter, generic OpenAI-compatible). `resolveAiConfig()` follows the **same env-wins / DB-fallback policy as `allowlist.ts`**: `AI_PROVIDER` (or legacy bare `MINIMAX_API_KEY`) env wins; otherwise the single-row `ai_settings` table set via the Settings page. Both `routes/extract.ts` and `routes/settings.ts` (`/api/settings/ai{,/test}`) go through the registry. Keys are plaintext in `data/app.db` (trust model) and **never returned to the browser** — only a masked `••••last4` preview. See `docs/AI_PROVIDERS.md`.
+`AI_PROVIDERS` registry is the single integration point (OpenAI, Anthropic, Google, MiniMax, OpenRouter, generic OpenAI-compatible). `resolveAiConfig()` follows the **same env-wins / DB-fallback policy as `allowlist.ts`**: `AI_PROVIDER` (or legacy bare `MINIMAX_API_KEY`) env wins; otherwise the single-row `ai_settings` table set via the Settings page. Both `routes/extract.ts` and `routes/settings.ts` (`/api/settings/ai{,/test}`) go through the registry. Keys are plaintext in `data/app.db` (trust model) and **never returned to the browser** — only a masked `••••last4` preview. Custom base URL applies only to `openai-compatible` (hosted providers ignore it, so a stale local endpoint can't leak across a provider switch); a provider with no `defaultModel` isn't `ready` until a model id is set. See `docs/AI_PROVIDERS.md`.
 
 ### Frontend (`src/`)
 
