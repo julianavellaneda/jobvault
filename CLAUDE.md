@@ -1,4 +1,4 @@
-# Jules Application Tracker
+# Jobvault
 
 A polished, self-hostable, human-in-the-loop application tracker. Single-process Bun server (Hono) serves the React SPA and a thin REST API on top of SQLite/libSQL. Originally a Firebase + Vercel private app; now an AGPL-3.0 OSS project that anyone can clone and run with `bun install && bun run start`.
 

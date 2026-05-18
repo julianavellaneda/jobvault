@@ -1,9 +1,9 @@
-# Jules Application Tracker
+# Jobvault
 
-[![CI](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/ci.yml)
-[![Publish Docker image](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Mclovin0213/jules-application-tracker/actions/workflows/docker-publish.yml)
+[![CI](https://github.com/Mclovin0213/jobvault/actions/workflows/ci.yml/badge.svg)](https://github.com/Mclovin0213/jobvault/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/Mclovin0213/jobvault/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Mclovin0213/jobvault/actions/workflows/docker-publish.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![GHCR image](https://img.shields.io/badge/ghcr.io-jules--application--tracker-2496ED?logo=docker&logoColor=white)](https://github.com/Mclovin0213/jules-application-tracker/pkgs/container/jules-application-tracker)
+[![GHCR image](https://img.shields.io/badge/ghcr.io-jobvault-2496ED?logo=docker&logoColor=white)](https://github.com/Mclovin0213/jobvault/pkgs/container/jobvault)
 
 A polished, **self-hostable**, human-in-the-loop job-application tracker. Paste links, work through them, track momentum. **Explicitly not** auto-apply, scraping, or mass-submission — those are non-goals.
 
@@ -24,7 +24,7 @@ A polished, **self-hostable**, human-in-the-loop job-application tracker. Paste 
 # docker-compose.yml
 services:
   app:
-    image: ghcr.io/mclovin0213/jules-application-tracker:latest
+    image: ghcr.io/mclovin0213/jobvault:latest
     ports:
       - "3000:3000"
     volumes:
@@ -44,8 +44,8 @@ Open <http://localhost:3000>. The DB is created and migrated on first boot. For 
 ## Quickstart — from source
 
 ```
-git clone https://github.com/Mclovin0213/jules-application-tracker.git
-cd jules-application-tracker
+git clone https://github.com/Mclovin0213/jobvault.git
+cd jobvault
 bun install
 bun run build
 bun run start

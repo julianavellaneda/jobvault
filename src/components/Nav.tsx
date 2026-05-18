@@ -64,7 +64,7 @@ export function Nav({
               J
             </span>
             <span className="bg-gradient-to-r from-[var(--color-foreground)] to-[var(--color-foreground)]/70 bg-clip-text text-base font-semibold tracking-tight text-transparent">
-              Jules App Tracker
+              Jobvault
             </span>
           </div>
           <div className="hidden md:block">{tabs}</div>

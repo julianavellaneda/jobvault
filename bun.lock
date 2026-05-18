@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "jules-application-tracker",
+      "name": "jobvault",
       "dependencies": {
         "@ai-sdk/anthropic": "^3.0.78",
         "@ai-sdk/google": "^3.0.75",

@@ -85,8 +85,8 @@ describe('auth shim', () => {
 
   it('AUTH_MODE=oauth with session in env allowlist returns 200', async () => {
     process.env.AUTH_MODE = 'oauth'
-    process.env.ALLOWLIST = 'jules@example.com,other@example.com'
-    sessionUser = { uid: 'g-123', email: 'jules@example.com', displayName: 'Jules' }
+    process.env.ALLOWLIST = 'user@example.com,other@example.com'
+    sessionUser = { uid: 'g-123', email: 'user@example.com', displayName: 'User' }
     const r = await buildApp().request('/api/applications')
     expect(r.status).toBe(200)
   })
@@ -94,7 +94,7 @@ describe('auth shim', () => {
   it('AUTH_MODE=oauth with session not in env allowlist returns 403', async () => {
     process.env.AUTH_MODE = 'oauth'
     process.env.ALLOWLIST = 'someone@else.com'
-    sessionUser = { uid: 'g-123', email: 'jules@example.com', displayName: 'Jules' }
+    sessionUser = { uid: 'g-123', email: 'user@example.com', displayName: 'User' }
     const r = await buildApp().request('/api/applications')
     expect(r.status).toBe(403)
     expect(await r.json()).toEqual({ error: 'not_allowed' })
@@ -110,16 +110,16 @@ describe('auth shim', () => {
 
   it('AUTH_MODE=oauth allowlist is case-insensitive', async () => {
     process.env.AUTH_MODE = 'oauth'
-    process.env.ALLOWLIST = 'Jules@Example.com'
-    sessionUser = { uid: 'g-123', email: 'jules@example.COM', displayName: 'Jules' }
+    process.env.ALLOWLIST = 'User@Example.com'
+    sessionUser = { uid: 'g-123', email: 'user@example.COM', displayName: 'User' }
     const r = await buildApp().request('/api/applications')
     expect(r.status).toBe(200)
   })
 
   it('AUTH_MODE=oauth falls back to SQL allowlist when ALLOWLIST env unset', async () => {
     process.env.AUTH_MODE = 'oauth'
-    adapter = memoryAdapter({ allowedEmails: ['jules@example.com'] })
-    sessionUser = { uid: 'g-123', email: 'jules@example.com', displayName: 'Jules' }
+    adapter = memoryAdapter({ allowedEmails: ['user@example.com'] })
+    sessionUser = { uid: 'g-123', email: 'user@example.com', displayName: 'User' }
     const r = await buildApp().request('/api/applications')
     expect(r.status).toBe(200)
   })
@@ -127,7 +127,7 @@ describe('auth shim', () => {
   it('AUTH_MODE=oauth SQL allowlist denies non-matching email', async () => {
     process.env.AUTH_MODE = 'oauth'
     adapter = memoryAdapter({ allowedEmails: ['someone@else.com'] })
-    sessionUser = { uid: 'g-123', email: 'jules@example.com', displayName: 'Jules' }
+    sessionUser = { uid: 'g-123', email: 'user@example.com', displayName: 'User' }
     const r = await buildApp().request('/api/applications')
     expect(r.status).toBe(403)
   })

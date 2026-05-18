@@ -2,7 +2,7 @@ services:
   app:
     # Prebuilt multi-arch image (amd64 + arm64), published on tag.
     # To build locally instead, comment `image:` and uncomment `build: .`.
-    image: ghcr.io/mclovin0213/jules-application-tracker:latest
+    image: ghcr.io/mclovin0213/jobvault:latest
     # build: .
     ports:
       - "3000:3000"

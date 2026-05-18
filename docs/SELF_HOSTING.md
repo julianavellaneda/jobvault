@@ -10,8 +10,8 @@ This app is designed to run as a single Bun process serving both the React SPA a
 ## Install
 
 ```
-git clone https://github.com/Mclovin0213/jules-application-tracker.git
-cd jules-application-tracker
+git clone https://github.com/Mclovin0213/jobvault.git
+cd jobvault
 bun install
 bun run build
 bun run start

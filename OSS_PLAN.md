@@ -1,10 +1,10 @@
-# OSS Extraction Plan — Jules Application Tracker → Public Self-Hostable App
+# OSS Extraction Plan — Jobvault → Public Self-Hostable App
 
 ## Context
 
-The current app is a Firebase-coupled personal tool for Jules + a few trusted collaborators. The AI-application SaaS market is brutally saturated (AIApply, Loopcv, Sonara, JobRight, Huntr, Teal, Careerflow…), but there's a real backlash against "spammy auto-apply" tools and clear demand for **polished, self-hostable, BYO-key trackers** (see `santifer/career-ops`, `Gsync/jobsync`). This app's actual strengths — a polished Tailwind v4 / Radix UI, fast bulk-paste flow, multi-user-by-default, hash-routed simplicity — slot directly into that niche.
+The current app is a Firebase-coupled personal tool for a small trusted group. The AI-application SaaS market is brutally saturated (AIApply, Loopcv, Sonara, JobRight, Huntr, Teal, Careerflow...), but there's a real backlash against "spammy auto-apply" tools and clear demand for **polished, self-hostable, BYO-key trackers** (see `santifer/career-ops`, `Gsync/jobsync`). This app's actual strengths — a polished Tailwind v4 / Radix UI, fast bulk-paste flow, multi-user-by-default, hash-routed simplicity — slot directly into that niche.
 
-**Goal:** Make this repo a public, AGPL-3.0 OSS project that anyone can self-host with `bun install && bun dev`, while the existing Vercel deployment keeps running with the same features Jules already uses, migrating off Firebase but staying hosted.
+**Goal:** Make this repo a public, AGPL-3.0 OSS project that anyone can self-host with `bun install && bun dev`, while the existing private deployment keeps running with the same features, migrating off Firebase but staying hosted.
 
 **Non-goals (explicit):** auto-apply bots, scraping job boards, hosted SaaS, payment infra, mass account creation, anything that LinkedIn could ban a user's account for.
 
@@ -14,7 +14,7 @@ The current app is a Firebase-coupled personal tool for Jules + a few trusted co
 |---|---|
 | Repo strategy | **Single repo, OSS-first** — current repo goes public; private Vercel keeps deploying from `main` |
 | Storage backend | **SQLite only**, drop Firebase entirely. `bun:sqlite` (built into Bun) for a local file. Single Drizzle schema. |
-| Auth | **Single-user no-auth by default**; optional Google/GitHub OAuth + allowlist via env for shared deployments (Jules's site stays on OAuth + allowlist) |
+| Auth | **Single-user no-auth by default**; optional Google/GitHub OAuth + allowlist via env for shared deployments (the private site stays on OAuth + allowlist) |
 | License | **AGPL-3.0** — blocks SaaS repackaging, fits the "anti-spammy-auto-apply" positioning |
 | AI features | Keep `/api/extract` (LLM-based link parsing). Make it **BYO API key** — user supplies their own OpenAI/Anthropic/MiniMax key via env. |
 
@@ -166,7 +166,7 @@ Per the codebase exploration, these are **storage-agnostic** and stay nearly unt
 ### Phase 4 — OSS migration ✅ DONE (2026-05-14)
 Scope expanded mid-pass: rather than keep the Vercel deployment alive in parallel, we dropped Vercel entirely and made the repo OSS-only.
 
-1. ✅ Exported live Firestore data → `data/app.db` via `scripts/legacy/migrate-from-firebase.ts` (13 applications + 1 allowlist row). Backup at `~/jules-tracker-backup/`.
+1. ✅ Exported live Firestore data → `data/app.db` via `scripts/legacy/migrate-from-firebase.ts` (13 applications + 1 allowlist row). Backup at `~/jobvault-backup/`.
 2. ✅ Replaced `api/` (Vercel serverless) with `server/` — a single Bun + Hono process that serves `dist/` and `/api/*`. Sessions via iron-session's `sealData`/`unsealData` + `hono/cookie`. Drizzle migrations apply on boot.
 3. ✅ Deleted `api/`, `src/firebase.ts`, `firestore.rules`, `firebase.json`, `vercel.json`, `tmp.db`. Dropped `firebase`, `firebase-admin`, `@vercel/node` from `package.json`. Moved the migration script to `scripts/legacy/` with `firebase-admin` as an opt-in install.
 4. ✅ Added `LICENSE` (AGPL-3.0), rewrote `README.md` for OSS positioning, wrote `docs/{SELF_HOSTING,CONFIGURATION,AI_PROVIDERS}.md`.
@@ -221,10 +221,10 @@ PUBLIC_BASE_URL=http://localhost:5173
 
 **Phase 2:** `curl` smoke tests against each new endpoint; manual login flow works in a local dev session; allowlist denial returns 403.
 
-**Phase 3:** Side-by-side on a staging Vercel: log in with Jules's account, verify all 5 pages render identical data, add a link, change a status, drag in Kanban, approve a pending. Compare against prod (still-on-Firebase) for parity. Stats page numbers match.
+**Phase 3:** Side-by-side on a staging Vercel: log in with an allowlisted account, verify all 5 pages render identical data, add a link, change a status, drag in Kanban, approve a pending. Compare against prod (still-on-Firebase) for parity. Stats page numbers match.
 
 **Phase 4:** Fresh clone on a clean machine: `git clone && bun install && bun dev` → app comes up at localhost:5173 with no env file, lands on Applications page, can add a URL. Total time under 60 seconds.
 
-## What changes for Jules's private site
+## What changes for the private site
 
 Practically: a Vercel env var swap (Firebase keys out, Turso URL + OAuth client in) and a one-time data import. UX, URL, design, feature set: identical. The "eventually move to self-hosted" path then becomes: clone the repo locally, point `DATABASE_URL=file:./app.db`, export Turso → local SQLite, done.

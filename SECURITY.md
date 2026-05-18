@@ -4,7 +4,7 @@
 
 **Please do not open a public GitHub issue for security vulnerabilities.**
 
-Use GitHub's [private vulnerability reporting](https://github.com/Mclovin0213/jules-application-tracker/security/advisories/new)
+Use GitHub's [private vulnerability reporting](https://github.com/Mclovin0213/jobvault/security/advisories/new)
 (Security → Report a vulnerability). I aim to acknowledge reports within 72 hours
 and to ship a fix or mitigation for confirmed issues as quickly as is practical
 for a solo-maintained project.
@@ -19,7 +19,7 @@ an early-stage project; pin to a tag and watch releases.
 
 ## Trust model — read this before exposing an instance
 
-Jules is a **single shared pool, trust-based** app. There are no per-user data
+Jobvault is a **single shared pool, trust-based** app. There are no per-user data
 boundaries: anyone who can authenticate (or anyone at all, in `AUTH_MODE=none`)
 can read and edit every record. This is an intentional design decision for the
 "me / my small group" use case, not a bug.

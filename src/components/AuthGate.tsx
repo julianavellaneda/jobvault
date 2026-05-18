@@ -21,7 +21,7 @@ export function AuthGate({ auth, children }: { auth: AuthState; children: ReactN
             <div className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-[var(--color-accent)]">
               <LogIn className="size-6" />
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight">Jules Application Tracker</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Jobvault</h1>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
               Sign in to view and add job applications.
             </p>

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Firestore → SQLite one-shot migration. Legacy: kept for anyone moving off
- * an existing Firestore-backed Jules tracker into the new SQLite backend.
+ * an existing Firestore-backed Jobvault instance into the new SQLite backend.
  * Not part of the regular runtime — `firebase-admin` is intentionally not a
  * project dependency.
  *
