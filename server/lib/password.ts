@@ -13,7 +13,7 @@ const R = 8
 const P = 1
 const KEYLEN = 64
 const SALT_BYTES = 16
-const MAXMEM = 128 * N * R * 4 // headroom above node's default
+const MAXMEM = 128 * N * R * 4 // explicit ceiling (~134 MB) for scrypt's internal buffer
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(SALT_BYTES)
