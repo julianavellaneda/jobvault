@@ -46,10 +46,10 @@ if (existsSync(distDir)) {
 const port = Number(process.env.PORT || 3000)
 
 await getAdapter()
+await (await import('./lib/bootstrap.ts')).maybeBootstrapAdmin()
 
 console.log(`Listening on http://localhost:${port}`)
-console.log(`  AUTH_MODE=${process.env.AUTH_MODE || 'none'}`)
-console.log(`  DATABASE_URL=${process.env.DATABASE_URL}`)
+console.log(`  DATABASE_URL=${process.env.DATABASE_URL ?? 'file:./data/app.db'}`)
 
 export default {
   port,
