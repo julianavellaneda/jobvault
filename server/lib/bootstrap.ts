@@ -1,6 +1,6 @@
+import { getMinPasswordLength } from './passwordPolicy.ts'
 import { countUsers, createUser, findUserByUsername } from './users.ts'
 
-const MIN_PASSWORD_LEN = 12
 const USERNAME_RE = /^[a-zA-Z0-9._-]{3,32}$/
 
 export async function maybeBootstrapAdmin(): Promise<void> {
@@ -21,8 +21,9 @@ export async function maybeBootstrapAdmin(): Promise<void> {
     )
   }
 
-  if (password.length < MIN_PASSWORD_LEN) {
-    throw new Error(`ADMIN_PASSWORD must be at least ${MIN_PASSWORD_LEN} characters.`)
+  const minLen = getMinPasswordLength()
+  if (password.length < minLen) {
+    throw new Error(`ADMIN_PASSWORD must be at least ${minLen} characters.`)
   }
 
   if ((await countUsers()) > 0) return

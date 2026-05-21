@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { parseBody } from '../lib/parseBody.ts'
+import { getMinPasswordLength, MAX_PASSWORD_LENGTH } from '../lib/passwordPolicy.ts'
 import { rateLimit } from '../lib/rateLimit.ts'
 import {
   destroyAppSession,
@@ -31,14 +32,16 @@ const usernameSchema = z
   .max(32)
   .regex(/^[a-zA-Z0-9._-]+$/, 'Username may only contain letters, numbers, and . _ -')
 
-const setupSchema = z.object({
-  username: usernameSchema,
-  password: z.string().min(12).max(200),
-})
+function buildSetupSchema() {
+  return z.object({
+    username: usernameSchema,
+    password: z.string().min(getMinPasswordLength()).max(MAX_PASSWORD_LENGTH),
+  })
+}
 
 const loginSchema = z.object({
   username: z.string().trim().min(1).max(32),
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
 })
 
 function toPublicUser(u: { id: string; username: string; role: 'admin' }) {
@@ -47,12 +50,16 @@ function toPublicUser(u: { id: string; username: string; role: 'admin' }) {
 
 app.get('/me', async c => {
   const userCount = await countUsers()
-  if (userCount === 0) return c.json({ status: 'needs-setup' })
+  if (userCount === 0) {
+    return c.json({ status: 'needs-setup', minPasswordLength: getMinPasswordLength() })
+  }
   const session = await getAppSession(c)
   if (!session.userId) return c.json({ status: 'signed-out' })
   const user = await findUserById(session.userId)
   if (!user) {
-    if ((await countUsers()) === 0) return c.json({ status: 'needs-setup' })
+    if ((await countUsers()) === 0) {
+      return c.json({ status: 'needs-setup', minPasswordLength: getMinPasswordLength() })
+    }
     return c.json({ status: 'signed-out' })
   }
   return c.json({ status: 'signed-in', user: toPublicUser(user) })
@@ -67,7 +74,7 @@ app.post('/setup', async c => {
     c.header('Retry-After', String(limit.retryAfterSec))
     return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
   }
-  const parsed = await parseBody(c, setupSchema)
+  const parsed = await parseBody(c, buildSetupSchema())
   if (!parsed.ok) return parsed.response
 
   let user

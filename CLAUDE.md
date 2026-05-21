@@ -39,6 +39,8 @@ Local username/password auth backed by SQLite. `requireUser(c)` reads the sealed
 
 The first user is created via `POST /api/auth/setup`, which is gated on `countUsers() === 0` and returns 410 once any user exists. For Docker/CI, `ADMIN_USERNAME` + `ADMIN_PASSWORD` env vars seed the admin at startup when the DB is empty (`server/lib/bootstrap.ts`).
 
+Password length has no minimum by default; the optional `MIN_PASSWORD_LENGTH` env var raises it (`server/lib/passwordPolicy.ts`, applied in `routes/auth.ts` setup + `bootstrap.ts`; the resolved value is surfaced to the SPA in the `needs-setup` payload of `GET /api/auth/me`).
+
 Passwords are hashed with `node:crypto` scrypt (`server/lib/password.ts`). Sessions remain iron-session sealed cookies (`server/lib/session.ts`); payload is just `{ userId }`.
 
 `GET /api/auth/me` returns one of `{ status: 'needs-setup' }`, `{ status: 'signed-out' }`, `{ status: 'signed-in', user }`. The SPA's `useAuth` hook branches off that.

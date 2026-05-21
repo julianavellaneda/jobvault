@@ -18,7 +18,8 @@ Jobvault uses local username/password auth backed by SQLite. There is no OAuth a
 |---|---|---|
 | `SESSION_SECRET` | _empty_ | ≥ 32 chars. Used to seal session cookies. **Required** — the server refuses to start without it. Generate: `openssl rand -base64 48`. |
 | `ADMIN_USERNAME` | _unset_ | Optional. With `ADMIN_PASSWORD`, creates the first admin at boot when the DB is empty. 3-32 chars, letters/numbers/`. _ -`. Useful for headless / Docker deploys. |
-| `ADMIN_PASSWORD` | _unset_ | Optional. Min 12 chars. See above. |
+| `ADMIN_PASSWORD` | _unset_ | Optional. Subject to `MIN_PASSWORD_LENGTH` — no minimum by default. See above. |
+| `MIN_PASSWORD_LENGTH` | _unset_ | Optional. Minimum password length enforced by the setup form and `ADMIN_PASSWORD`. Unset = no minimum (a non-empty password is the only rule). |
 
 On first run (DB empty, no `ADMIN_*` envs), `GET /api/auth/me` returns `{ status: 'needs-setup' }` and the UI shows a one-time setup form that creates the admin user. Subsequent requests use sealed session cookies.
 

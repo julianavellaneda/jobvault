@@ -9,14 +9,20 @@ import { useAiSettings } from '@/hooks/useAiSettings'
 
 type Step = 'account' | 'ai'
 
-export function Setup({ onComplete }: { onComplete: () => void }) {
+export function Setup({
+  onComplete,
+  minPasswordLength = 1,
+}: {
+  onComplete: () => void
+  minPasswordLength?: number
+}) {
   const [step, setStep] = useState<Step>('account')
   return (
     <div className="flex min-h-svh items-center justify-center p-6">
       <div className="w-full max-w-lg space-y-4">
         <Steps current={step} />
         {step === 'account' ? (
-          <AccountStep onDone={() => setStep('ai')} />
+          <AccountStep onDone={() => setStep('ai')} minPasswordLength={minPasswordLength} />
         ) : (
           <AiStep onDone={onComplete} />
         )}
@@ -39,7 +45,13 @@ function Steps({ current }: { current: Step }) {
   )
 }
 
-function AccountStep({ onDone }: { onDone: () => void }) {
+function AccountStep({
+  onDone,
+  minPasswordLength,
+}: {
+  onDone: () => void
+  minPasswordLength: number
+}) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -51,7 +63,9 @@ function AccountStep({ onDone }: { onDone: () => void }) {
     if (u.length < 3 || u.length > 32) return 'Username must be 3-32 characters.'
     if (!/^[a-zA-Z0-9._-]+$/.test(u))
       return 'Username may only contain letters, numbers, and . _ -'
-    if (password.length < 12) return 'Password must be at least 12 characters.'
+    if (minPasswordLength > 1 && password.length < minPasswordLength)
+      return `Password must be at least ${minPasswordLength} characters.`
+    if (password.length < 1) return 'Password is required.'
     if (password !== confirm) return 'Passwords do not match.'
     return null
   }
@@ -108,12 +122,14 @@ function AccountStep({ onDone }: { onDone: () => void }) {
           />
           <Input
             type="password"
-            placeholder="Password (min 12 characters)"
+            placeholder={
+              minPasswordLength > 1 ? `Password (min ${minPasswordLength} characters)` : 'Password'
+            }
             value={password}
             onChange={e => setPassword(e.target.value)}
             autoComplete="new-password"
             required
-            minLength={12}
+            minLength={minPasswordLength}
             disabled={busy}
           />
           <Input

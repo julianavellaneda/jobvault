@@ -47,7 +47,7 @@ describe('GET /api/auth/me', () => {
   it('returns needs-setup when no users exist', async () => {
     const r = await buildApp().request('/api/auth/me')
     expect(r.status).toBe(200)
-    expect(await r.json()).toEqual({ status: 'needs-setup' })
+    expect(await r.json()).toEqual({ status: 'needs-setup', minPasswordLength: 1 })
   })
 
   it('returns signed-out when users exist but no session', async () => {
@@ -80,7 +80,7 @@ describe('GET /api/auth/me', () => {
     session = { userId: 'ghost' }
     const r = await buildApp().request('/api/auth/me')
     expect(r.status).toBe(200)
-    expect(await r.json()).toEqual({ status: 'needs-setup' })
+    expect(await r.json()).toEqual({ status: 'needs-setup', minPasswordLength: 1 })
   })
 })
 
@@ -111,12 +111,33 @@ describe('POST /api/auth/setup', () => {
     expect(await r.json()).toEqual({ error: 'setup_already_complete' })
   })
 
-  it('rejects passwords shorter than 12 chars', async () => {
+  it('accepts a short password when no minimum is configured', async () => {
     const r = await json(buildApp(), '/api/auth/setup', 'POST', {
       username: 'alex',
       password: 'short',
     })
+    expect(r.status).toBe(200)
+  })
+
+  it('rejects an empty password', async () => {
+    const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+      username: 'alex',
+      password: '',
+    })
     expect(r.status).toBe(400)
+  })
+
+  it('rejects passwords shorter than MIN_PASSWORD_LENGTH when set', async () => {
+    process.env.MIN_PASSWORD_LENGTH = '16'
+    try {
+      const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+        username: 'alex',
+        password: 'short',
+      })
+      expect(r.status).toBe(400)
+    } finally {
+      delete process.env.MIN_PASSWORD_LENGTH
+    }
   })
 
   it('rejects malformed usernames', async () => {

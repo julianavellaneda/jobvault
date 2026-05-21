@@ -18,6 +18,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
+  delete process.env.MIN_PASSWORD_LENGTH
 })
 
 describe('maybeBootstrapAdmin', () => {
@@ -48,9 +49,17 @@ describe('maybeBootstrapAdmin', () => {
     expect(await adapter.findUserByUsername('admin')).toBeNull()
   })
 
-  it('throws if ADMIN_PASSWORD is shorter than 12 chars', async () => {
+  it('accepts a short ADMIN_PASSWORD when no minimum is configured', async () => {
     process.env.ADMIN_USERNAME = 'admin'
     process.env.ADMIN_PASSWORD = 'short'
+    await maybeBootstrapAdmin()
+    expect(await adapter.findUserByUsername('admin')).not.toBeNull()
+  })
+
+  it('throws if ADMIN_PASSWORD is shorter than MIN_PASSWORD_LENGTH', async () => {
+    process.env.ADMIN_USERNAME = 'admin'
+    process.env.ADMIN_PASSWORD = 'short'
+    process.env.MIN_PASSWORD_LENGTH = '16'
     await expect(maybeBootstrapAdmin()).rejects.toThrow(/ADMIN_PASSWORD/)
   })
 
