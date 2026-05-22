@@ -10,7 +10,7 @@ This app is designed to run as a single Bun process serving both the React SPA a
 ## Install
 
 ```
-git clone https://github.com/Mclovin0213/jobvault.git
+git clone https://github.com/julianavellaneda/jobvault.git
 cd jobvault
 bun install
 bun run build

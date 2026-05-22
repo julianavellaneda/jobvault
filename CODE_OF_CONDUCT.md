@@ -46,7 +46,7 @@ an individual is officially representing the community in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the project maintainer via GitHub's
-[private vulnerability reporting](https://github.com/Mclovin0213/jobvault/security/advisories/new)
+[private vulnerability reporting](https://github.com/julianavellaneda/jobvault/security/advisories/new)
 or by contacting the repository owner directly. All complaints will be reviewed
 and investigated promptly and fairly.
 

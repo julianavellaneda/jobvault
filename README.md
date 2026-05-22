@@ -1,9 +1,9 @@
 # Jobvault
 
-[![CI](https://github.com/Mclovin0213/jobvault/actions/workflows/ci.yml/badge.svg)](https://github.com/Mclovin0213/jobvault/actions/workflows/ci.yml)
-[![Publish Docker image](https://github.com/Mclovin0213/jobvault/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Mclovin0213/jobvault/actions/workflows/docker-publish.yml)
+[![CI](https://github.com/julianavellaneda/jobvault/actions/workflows/ci.yml/badge.svg)](https://github.com/julianavellaneda/jobvault/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/julianavellaneda/jobvault/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/julianavellaneda/jobvault/actions/workflows/docker-publish.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![GHCR image](https://img.shields.io/badge/ghcr.io-jobvault-2496ED?logo=docker&logoColor=white)](https://github.com/Mclovin0213/jobvault/pkgs/container/jobvault)
+[![GHCR image](https://img.shields.io/badge/ghcr.io-jobvault-2496ED?logo=docker&logoColor=white)](https://github.com/julianavellaneda/jobvault/pkgs/container/jobvault)
 
 A polished, **self-hostable**, human-in-the-loop job-application tracker. Paste links, work through them, track momentum. **Explicitly not** auto-apply, scraping, or mass-submission — those are non-goals.
 
@@ -21,7 +21,7 @@ A polished, **self-hostable**, human-in-the-loop job-application tracker. Paste 
 # docker-compose.yml
 services:
   app:
-    image: ghcr.io/mclovin0213/jobvault:latest
+    image: ghcr.io/julianavellaneda/jobvault:latest
     ports:
       - "3000:3000"
     volumes:
@@ -54,7 +54,7 @@ docker run \
   -e SESSION_SECRET=$(openssl rand -base64 48) \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_PASSWORD='a-long-passphrase-or-random-string' \
-  ghcr.io/mclovin0213/jobvault:latest
+  ghcr.io/julianavellaneda/jobvault:latest
 ```
 
 These env vars are only read when the database is empty — they don't override an existing user, and they're safe to leave in your compose file after setup.
@@ -73,7 +73,7 @@ Your applications and pending URLs are untouched.
 ## Quickstart — from source
 
 ```
-git clone https://github.com/Mclovin0213/jobvault.git
+git clone https://github.com/julianavellaneda/jobvault.git
 cd jobvault
 bun install
 bun run build

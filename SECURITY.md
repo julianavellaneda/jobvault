@@ -4,7 +4,7 @@
 
 **Please do not open a public GitHub issue for security vulnerabilities.**
 
-Use GitHub's [private vulnerability reporting](https://github.com/Mclovin0213/jobvault/security/advisories/new)
+Use GitHub's [private vulnerability reporting](https://github.com/julianavellaneda/jobvault/security/advisories/new)
 (Security → Report a vulnerability). I aim to acknowledge reports within 72 hours
 and to ship a fix or mitigation for confirmed issues as quickly as is practical
 for a solo-maintained project.

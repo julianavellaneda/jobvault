@@ -117,9 +117,9 @@ Initial OSS release.
   CI, and OSS scaffolding (AGPL-3.0 license, CONTRIBUTING, CODE_OF_CONDUCT,
   SECURITY policy, issue/PR templates).
 
-[Unreleased]: https://github.com/Mclovin0213/jobvault/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/Mclovin0213/jobvault/compare/v0.2.1...v0.3.0
-[0.2.1]: https://github.com/Mclovin0213/jobvault/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/Mclovin0213/jobvault/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/Mclovin0213/jobvault/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/Mclovin0213/jobvault/releases/tag/v0.1.0
+[Unreleased]: https://github.com/julianavellaneda/jobvault/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/julianavellaneda/jobvault/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/julianavellaneda/jobvault/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/julianavellaneda/jobvault/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/julianavellaneda/jobvault/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/julianavellaneda/jobvault/releases/tag/v0.1.0
