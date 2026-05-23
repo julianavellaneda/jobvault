@@ -1,14 +1,21 @@
-import type { Database } from 'bun:sqlite'
 import { existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
-import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
-import { createDb, parseDatabaseUrl, type Db } from '../../src/storage/sqlite/client.ts'
+import {
+  createDb,
+  parseDatabaseUrl,
+  type Db,
+  type SqliteClient,
+} from '../../src/storage/sqlite/client.ts'
 import { SqliteDataAdapter } from '../../src/storage/sqlite/adapter.ts'
 import type { DataAdapter } from '../../src/storage/adapter.ts'
 
-let cached: { adapter: DataAdapter; db: Db; client: Database } | null = null
+let cached: { adapter: DataAdapter; db: Db; client: SqliteClient } | null = null
 let envLoaded = false
 let migrated = false
+
+function isBunRuntime(): boolean {
+  return typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+}
 
 function loadLocalEnv(): void {
   if (envLoaded) return
@@ -30,6 +37,20 @@ function ensureLocalDir(url: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
 }
 
+function migrationsFolder(): string {
+  return process.env.MIGRATIONS_FOLDER || 'src/storage/sqlite/migrations'
+}
+
+async function runMigrations(db: Db): Promise<void> {
+  if (isBunRuntime()) {
+    const { migrate } = await import('drizzle-orm/bun-sqlite/migrator')
+    migrate(db as never, { migrationsFolder: migrationsFolder() })
+    return
+  }
+  const { migrate } = await import('drizzle-orm/better-sqlite3/migrator')
+  migrate(db as never, { migrationsFolder: migrationsFolder() })
+}
+
 export async function getAdapter(): Promise<DataAdapter> {
   if (cached) return cached.adapter
   loadLocalEnv()
@@ -37,7 +58,7 @@ export async function getAdapter(): Promise<DataAdapter> {
   ensureLocalDir(url)
   const { db, client } = await createDb(url)
   if (!migrated) {
-    await migrate(db, { migrationsFolder: 'src/storage/sqlite/migrations' })
+    await runMigrations(db)
     migrated = true
   }
   const adapter = new SqliteDataAdapter(db)
@@ -49,6 +70,10 @@ export function _setAdapterForTesting(adapter: DataAdapter | null): void {
   if (adapter === null) {
     cached = null
   } else {
-    cached = { adapter, db: null as unknown as Db, client: null as unknown as Database }
+    cached = {
+      adapter,
+      db: null as unknown as Db,
+      client: null as unknown as SqliteClient,
+    }
   }
 }

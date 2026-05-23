@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/bun'
 import applications from './routes/applications.ts'
 import pending from './routes/pending.ts'
 import auth from './routes/auth.ts'
@@ -9,6 +8,10 @@ import extract from './routes/extract.ts'
 import settings from './routes/settings.ts'
 import { getAdapter } from './lib/db.ts'
 import { assertSessionSecret } from './lib/session.ts'
+
+function isBunRuntime(): boolean {
+  return typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+}
 
 function loadEnv(): void {
   if (process.env.DATABASE_URL) return
@@ -40,9 +43,18 @@ app.notFound(c => {
 })
 
 const distDir = resolve(process.cwd(), 'dist')
-if (existsSync(distDir)) {
-  app.use('/*', serveStatic({ root: './dist' }))
-  app.get('*', serveStatic({ path: './dist/index.html' }))
+const distExists = existsSync(distDir)
+
+if (distExists) {
+  if (isBunRuntime()) {
+    const { serveStatic } = await import('hono/bun')
+    app.use('/*', serveStatic({ root: './dist' }))
+    app.get('*', serveStatic({ path: './dist/index.html' }))
+  } else {
+    const { serveStatic } = await import('@hono/node-server/serve-static')
+    app.use('/*', serveStatic({ root: './dist' }))
+    app.get('*', serveStatic({ path: './dist/index.html' }))
+  }
 }
 
 const port = Number(process.env.PORT || 3000)
@@ -50,9 +62,20 @@ const port = Number(process.env.PORT || 3000)
 await getAdapter()
 await (await import('./lib/bootstrap.ts')).maybeBootstrapAdmin()
 
-console.log(`Listening on http://localhost:${port}`)
-console.log(`  DATABASE_URL=${process.env.DATABASE_URL ?? 'file:./data/app.db'}`)
+if (isBunRuntime()) {
+  console.log(`Listening on http://localhost:${port}`)
+  console.log(`  DATABASE_URL=${process.env.DATABASE_URL ?? 'file:./data/app.db'}`)
+} else {
+  const { serve } = await import('@hono/node-server')
+  serve({ fetch: app.fetch, port }, info => {
+    console.log(`Listening on http://localhost:${info.port}`)
+    console.log(`  DATABASE_URL=${process.env.DATABASE_URL ?? 'file:./data/app.db'}`)
+  })
+}
 
+// Bun picks up this default export and starts its own HTTP server.
+// Under Node, the @hono/node-server serve() call above already bound the port,
+// so this export is effectively a no-op there.
 export default {
   port,
   fetch: app.fetch,
