@@ -42,10 +42,17 @@ app.notFound(c => {
   return c.text('not_found', 404)
 })
 
-const distDir = resolve(process.cwd(), 'dist')
+const distDir = process.env.DIST_DIR
+  ? resolve(process.env.DIST_DIR)
+  : resolve(process.cwd(), 'dist')
 const distExists = existsSync(distDir)
 
 if (distExists) {
+  // serveStatic resolves `root` relative to process.cwd(), so anchor cwd at
+  // the dist parent when DIST_DIR was provided (e.g. Tauri sidecar mode).
+  if (process.env.DIST_DIR) {
+    process.chdir(resolve(distDir, '..'))
+  }
   if (isBunRuntime()) {
     const { serveStatic } = await import('hono/bun')
     app.use('/*', serveStatic({ root: './dist' }))

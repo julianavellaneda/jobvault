@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useApplications } from '@/hooks/useApplications'
 import { usePendingUrls } from '@/hooks/usePendingUrls'
 import { AuthGate } from '@/components/AuthGate'
+import { ConfirmRoot } from '@/lib/confirm'
 import { Nav, type View } from '@/components/Nav'
 import { Dashboard } from '@/pages/Dashboard'
 import { Applications } from '@/pages/Applications'
@@ -102,6 +103,7 @@ export default function App() {
   return (
     <>
       <Toaster theme={dark ? 'dark' : 'light'} richColors position="bottom-right" />
+      <ConfirmRoot />
       <AuthGate auth={auth}>
         {auth.user ? (
           <AppShell

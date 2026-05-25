@@ -16,6 +16,7 @@ const TAURI_DIR = resolve(ROOT, 'src-tauri')
 const BINARIES_DIR = resolve(TAURI_DIR, 'binaries')
 const RESOURCES_DIR = resolve(TAURI_DIR, 'resources')
 const DIST_SERVER = resolve(ROOT, 'dist-server')
+const DIST_WEB = resolve(ROOT, 'dist')
 
 function hostTargetTriple(): string {
   // Match Tauri's expected sidecar suffix per `rustc -vV | grep host`.
@@ -93,6 +94,13 @@ function copyServerBundle() {
       recursive: true,
     })
   }
+  // The sidecar Hono server serves the SPA from DIST_DIR (set by Rust to
+  // <resources>/resources/dist). Tauri's own frontendDist isn't accessible to
+  // child processes, so we copy dist/ in alongside the server bundle.
+  if (!existsSync(resolve(DIST_WEB, 'index.html'))) {
+    throw new Error(`dist/index.html not found — run "bun run build" first`)
+  }
+  cpSync(DIST_WEB, resolve(RESOURCES_DIR, 'dist'), { recursive: true })
   console.log(`✓ server bundle → ${RESOURCES_DIR}`)
 }
 

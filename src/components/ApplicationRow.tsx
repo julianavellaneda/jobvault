@@ -11,6 +11,7 @@ import { hostnameOf } from '@/lib/urls'
 import { useDebouncedSaver, useReconciledDraft } from '@/lib/hooks'
 import { formatShortDate } from '@/lib/applicationsView'
 import { STATUS_BORDER } from '@/lib/statusColors'
+import { confirm } from '@/lib/confirm'
 import { cn } from '@/lib/utils'
 import {
   Select,
@@ -193,7 +194,7 @@ function ExpandedRow({
   const row = useRowSaver(app.id, onUpdate)
 
   const handleDelete = useCallback(async () => {
-    if (!confirm('Delete this application?')) return
+    if (!(await confirm('Delete this application?', { destructive: true, confirmLabel: 'Delete' }))) return
     await row.cancel()
     try {
       await onRemove(app.id)

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { useDebouncedSaver, useReconciledDraft } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
+import { confirm } from '@/lib/confirm'
 
 type UpdatePendingFn = (id: string, patch: Partial<PendingUrl>) => Promise<void>
 type RemovePendingFn = (id: string) => Promise<void>
@@ -171,7 +172,7 @@ function PendingRow({
   }, [p.id, p.url, saver, updatePending])
 
   const handleReject = useCallback(async () => {
-    if (!confirm('Reject and discard this link?')) return
+    if (!(await confirm('Reject and discard this link?', { destructive: true, confirmLabel: 'Reject' }))) return
     await saver.cancel()
     pendingPatchRef.current = {}
     await removePending(p.id)

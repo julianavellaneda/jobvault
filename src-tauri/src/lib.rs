@@ -31,6 +31,7 @@ pub fn run() {
             let db_path = data_dir.join("app.db");
             let secret = ensure_session_secret(&data_dir)?;
             let migrations_dir = resolve_migrations_dir(&app_handle);
+            let dist_dir = resolve_dist_dir(&app_handle);
 
             let port = pick_port();
             let url = format!("http://127.0.0.1:{port}");
@@ -49,7 +50,8 @@ pub fn run() {
                 .env(
                     "MIGRATIONS_FOLDER",
                     migrations_dir.to_string_lossy().to_string(),
-                );
+                )
+                .env("DIST_DIR", dist_dir.to_string_lossy().to_string());
 
             let (mut rx, child) = sidecar
                 .spawn()
@@ -68,16 +70,16 @@ pub fn run() {
                 while let Some(event) = rx.recv().await {
                     match event {
                         CommandEvent::Stdout(line) => {
-                            log::info!("[server] {}", String::from_utf8_lossy(&line).trim_end());
+                            eprintln!("[server] {}", String::from_utf8_lossy(&line).trim_end());
                         }
                         CommandEvent::Stderr(line) => {
-                            log::warn!("[server] {}", String::from_utf8_lossy(&line).trim_end());
+                            eprintln!("[server] {}", String::from_utf8_lossy(&line).trim_end());
                         }
                         CommandEvent::Error(err) => {
-                            log::error!("[server] {}", err);
+                            eprintln!("[server] error: {}", err);
                         }
                         CommandEvent::Terminated(payload) => {
-                            log::error!("[server] terminated: {:?}", payload);
+                            eprintln!("[server] terminated: {:?}", payload);
                             let _ = log_handle.exit(1);
                             break;
                         }
@@ -108,11 +110,11 @@ pub fn run() {
                         .visible(true)
                         .build();
                         if let Err(e) = window {
-                            log::error!("failed to build window: {e}");
+                            eprintln!("failed to build window: {e}");
                         }
                     });
                 } else {
-                    log::error!("server did not become ready in time");
+                    eprintln!("server did not become ready in time");
                     let _ = ready_handle.exit(1);
                 }
             });
@@ -189,6 +191,27 @@ fn resolve_server_entry<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf
         }
     }
     PathBuf::from("./dist-server/server.mjs")
+}
+
+fn resolve_dist_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {
+    // Bundled path: dist is copied into resources/ by the prepare script.
+    let base = resolve_resource_dir(app);
+    let bundled = base.join("resources").join("dist");
+    if bundled.exists() {
+        return bundled;
+    }
+    // Dev fallback: walk up from current_exe to find the project root's dist/.
+    let mut probe = std::env::current_exe().expect("current_exe");
+    for _ in 0..6 {
+        if !probe.pop() {
+            break;
+        }
+        let candidate = probe.join("dist");
+        if candidate.join("index.html").exists() {
+            return candidate;
+        }
+    }
+    PathBuf::from("./dist")
 }
 
 fn resolve_migrations_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> PathBuf {

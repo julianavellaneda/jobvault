@@ -25,7 +25,7 @@
       "icons/icon.ico"
     ],
     "externalBin": ["binaries/jobvault-node"],
-    "resources": ["resources/*"],
+    "resources": ["resources/**/*"],
     "category": "Productivity",
     "shortDescription": "Self-hostable application tracker",
     "longDescription": "Jobvault: a polished, self-hostable, human-in-the-loop application tracker."
