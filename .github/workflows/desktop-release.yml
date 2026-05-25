@@ -38,7 +38,10 @@ jobs:
       - name: Install Node (matches sidecar)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22+ — better-sqlite3 12.10 only publishes prebuilts for
+          # ABI v127+, and we need a prebuild for the x64-on-arm64 cross
+          # case (no system compiler-against-x64-headers in CI).
+          node-version: '22'
           architecture: ${{ matrix.node-arch }}
 
       - name: Install Rust
