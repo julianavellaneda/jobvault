@@ -28,6 +28,10 @@
     "resources": ["resources/**/*"],
     "category": "Productivity",
     "shortDescription": "Self-hostable application tracker",
-    "longDescription": "Jobvault: a polished, self-hostable, human-in-the-loop application tracker."
+    "longDescription": "Jobvault: a polished, self-hostable, human-in-the-loop application tracker.",
+    "macOS": {
+      "entitlements": "entitlements.plist",
+      "minimumSystemVersion": "10.15"
+    }
   }
 }
