@@ -135,6 +135,22 @@ jobs:
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
+      - name: Pre-sign native .node modules for notarization
+        if: runner.os == 'macOS'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          # Tauri signs the top-level Mach-Os (jobvault-desktop, jobvault-node, .app)
+          # but does NOT recurse into Resources/. better-sqlite3 ships a prebuilt
+          # better_sqlite3.node with an ad-hoc signature; notarytool rejects it.
+          # Pre-sign every .node with our Developer ID + secure timestamp +
+          # hardened-runtime flag so it passes notarization inside the bundle.
+          find src-tauri/resources -name '*.node' -print0 | while IFS= read -r -d '' f; do
+            echo "Signing $f"
+            codesign --force --timestamp --options runtime \
+              --sign "$APPLE_SIGNING_IDENTITY" "$f"
+          done
+
       - name: Tauri build
         env:
           # macOS code signing + notarization (Tauri v2 reads these natively).
