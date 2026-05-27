@@ -50,9 +50,9 @@ in your OS app-data dir (`~/Library/Application Support/com.jobvault.desktop/`
 on macOS, `~/.local/share/com.jobvault.desktop/` on Linux) and the session key
 is generated locally on first launch. No external services, no cloud sync.
 
-> Builds are currently **unsigned**. On macOS, right-click → Open the first time
-> (or run `xattr -d com.apple.quarantine /Applications/Jobvault.app`) to bypass
-> Gatekeeper. Signed/notarized builds are a separate follow-up.
+> macOS bundles (v0.4.3+) are signed with a Developer ID Application
+> certificate and notarized by Apple, so the `.dmg` opens without
+> Gatekeeper warnings. Linux `.AppImage` / `.deb` artifacts are unsigned.
 
 ## First run
 

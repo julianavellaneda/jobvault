@@ -6,6 +6,28 @@ All notable changes to this project are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-05-26
+
+macOS bundles are now signed with a Developer ID Application certificate
+and notarized by Apple, so the `.dmg` opens without Gatekeeper warnings.
+(0.4.1 and 0.4.2 were broken attempts at the same release; their tagged
+artifacts failed notarization and were not published.)
+
+### Added
+- **Apple code-signing + notarization in `desktop-release`.** The workflow
+  imports a Developer ID Application cert into an ephemeral keychain on
+  the macOS runner, then Tauri's bundler signs `jobvault-desktop`,
+  `jobvault-node`, and the `.app` itself and submits the bundle to
+  `notarytool` via `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID`.
+- **Native `.node` pre-signing inside `prepare-tauri-sidecar.ts`.**
+  Tauri's bundler only signs top-level Mach-Os and never recurses into
+  `Contents/Resources/`, so `better-sqlite3`'s prebuilt `better_sqlite3.node`
+  would ship with `prebuild-install`'s ad-hoc signature and fail
+  notarization. The prepare script now signs every `.node` it copies
+  with Developer ID + secure timestamp + hardened runtime, and Tauri's
+  `beforeBuildCommand` re-invocation runs the same path — so the
+  signature is the last write to those files before bundling.
+
 ## [0.4.0] - 2026-05-25
 
 Desktop app: Jobvault now ships a native desktop shell (macOS / Linux) built
@@ -151,7 +173,8 @@ Initial OSS release.
   CI, and OSS scaffolding (AGPL-3.0 license, CONTRIBUTING, CODE_OF_CONDUCT,
   SECURITY policy, issue/PR templates).
 
-[Unreleased]: https://github.com/julianavellaneda/jobvault/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/julianavellaneda/jobvault/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/julianavellaneda/jobvault/compare/v0.4.0...v0.4.3
 [0.4.0]: https://github.com/julianavellaneda/jobvault/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/julianavellaneda/jobvault/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/julianavellaneda/jobvault/compare/v0.2.1...v0.3.0
