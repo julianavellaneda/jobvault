@@ -4,11 +4,15 @@ import {
   appliedTodayCount,
   bySource,
   computeStreak,
+  daysUntilDeadline,
   funnelCounts,
   pendingCount,
+  rangeFilter,
+  responseRate,
   statusCounts,
   submissionHeatmap,
   totalApplied,
+  upcomingDeadlines,
 } from './stats'
 
 function ts(date: Date): number {
@@ -220,5 +224,112 @@ describe('submissionHeatmap', () => {
     const grid = submissionHeatmap([], weeks)
     grid[0][0] = 99
     expect(grid[1][0]).toBe(0)
+  })
+})
+
+describe('rangeFilter', () => {
+  it('"all" returns apps unchanged including null-anchor apps', () => {
+    const apps = [
+      app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(3)) }),
+      app({ id: '2', status: 'pending', appliedAt: null, createdAt: null }),
+    ]
+    expect(rangeFilter(apps, 'all')).toHaveLength(2)
+  })
+
+  it('"7d" includes an app applied 3 days ago', () => {
+    const apps = [app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(3)) })]
+    expect(rangeFilter(apps, '7d')).toHaveLength(1)
+  })
+
+  it('"7d" excludes an app applied 10 days ago', () => {
+    const apps = [app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(10)) })]
+    expect(rangeFilter(apps, '7d')).toHaveLength(0)
+  })
+
+  it('"30d" includes an app applied 10 days ago', () => {
+    const apps = [app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(10)) })]
+    expect(rangeFilter(apps, '30d')).toHaveLength(1)
+  })
+
+  it('windowed range excludes a both-dates-null app', () => {
+    const apps = [app({ id: '1', status: 'pending', appliedAt: null, createdAt: null })]
+    expect(rangeFilter(apps, '7d')).toHaveLength(0)
+    expect(rangeFilter(apps, '30d')).toHaveLength(0)
+  })
+
+  it('falls back to createdAt anchor when appliedAt is null', () => {
+    const apps = [
+      app({ id: '1', status: 'pending', appliedAt: null, createdAt: ts(daysAgo(3)) }),
+    ]
+    expect(rangeFilter(apps, '7d')).toHaveLength(1)
+  })
+})
+
+describe('upcomingDeadlines', () => {
+  const DAY = 86_400_000
+  const now = Date.now()
+
+  it('excludes apps with null deadline', () => {
+    const apps = [app({ id: '1', status: 'applied', deadline: null })]
+    expect(upcomingDeadlines(apps, now)).toHaveLength(0)
+  })
+
+  it('excludes apps with a past deadline (deadline <= now)', () => {
+    const apps = [app({ id: '1', status: 'applied', deadline: now - DAY })]
+    expect(upcomingDeadlines(apps, now)).toHaveLength(0)
+  })
+
+  it('returns results sorted ascending by deadline', () => {
+    const apps = [
+      app({ id: 'b', status: 'applied', deadline: now + 5 * DAY }),
+      app({ id: 'a', status: 'applied', deadline: now + 2 * DAY }),
+      app({ id: 'c', status: 'applied', deadline: now + 10 * DAY }),
+    ]
+    const result = upcomingDeadlines(apps, now)
+    expect(result.map(a => a.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('respects the limit parameter', () => {
+    const apps = Array.from({ length: 6 }, (_, i) =>
+      app({ id: String(i), status: 'applied', deadline: now + (i + 1) * DAY }),
+    )
+    expect(upcomingDeadlines(apps, now, 4)).toHaveLength(4)
+  })
+})
+
+describe('daysUntilDeadline', () => {
+  const DAY = 86_400_000
+  const now = Date.now()
+
+  it('returns the rounded number of days', () => {
+    expect(daysUntilDeadline(now + 3 * DAY, now)).toBe(3)
+    expect(daysUntilDeadline(now + 4 * DAY, now)).toBe(4)
+  })
+
+  it('returns 0 for a past deadline', () => {
+    expect(daysUntilDeadline(now - DAY, now)).toBe(0)
+  })
+})
+
+describe('responseRate', () => {
+  it('returns the interview+offer count as a percentage of applied', () => {
+    const apps = [
+      app({ id: '1', status: 'applied' }),
+      app({ id: '2', status: 'applied' }),
+      app({ id: '3', status: 'interview' }),
+      app({ id: '4', status: 'offer' }),
+    ]
+    // funnelCounts: Applied=4 (applied+interview+offer+rejected), Interview=2 (interview+offer)
+    // 2/4 = 50%
+    expect(responseRate(apps)).toBe(50)
+  })
+
+  it('returns 0 for empty apps', () => {
+    expect(responseRate([])).toBe(0)
+  })
+
+  it('returns 0 when no apps have passed the applied stage', () => {
+    const apps = [app({ id: '1', status: 'pending' })]
+    expect(responseRate(apps)).toBe(0)
   })
 })

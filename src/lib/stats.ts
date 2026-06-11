@@ -1,5 +1,7 @@
 import type { Application, Status } from '@/types'
 
+export type DashRange = '7d' | '30d' | 'all'
+
 const RESPONDED_STATUSES: Status[] = ['applied', 'interview', 'offer', 'rejected']
 
 function dayKey(d: Date): string {
@@ -149,6 +151,34 @@ export function backlogBurndown(apps: Application[], days = 30): { date: string;
     points.push({ date: dayKey(cursor).slice(5), backlog: pendingAtCursor })
   }
   return points
+}
+
+export function rangeFilter(apps: Application[], range: DashRange): Application[] {
+  if (range === 'all') return apps
+  const ms = range === '7d' ? 7 * 86_400_000 : 30 * 86_400_000
+  const cutoff = Date.now() - ms
+  return apps.filter(a => {
+    const anchor = a.appliedAt ?? a.createdAt
+    return anchor != null && anchor >= cutoff
+  })
+}
+
+export function upcomingDeadlines(apps: Application[], now: number, limit = 4): Application[] {
+  return apps
+    .filter(a => a.deadline != null && a.deadline > now)
+    .sort((a, b) => a.deadline! - b.deadline!)
+    .slice(0, limit)
+}
+
+export function daysUntilDeadline(deadline: number, now: number): number {
+  return Math.max(0, Math.round((deadline - now) / 86_400_000))
+}
+
+export function responseRate(apps: Application[]): number {
+  const funnel = funnelCounts(apps)
+  const applied = funnel.find(f => f.stage === 'Applied')?.count ?? 0
+  const responded = funnel.find(f => f.stage === 'Interview')?.count ?? 0
+  return applied === 0 ? 0 : Math.round((responded / applied) * 100)
 }
 
 export function pendingCount(apps: Application[]): number {

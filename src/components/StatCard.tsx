@@ -6,12 +6,14 @@ export function StatCard({
   label,
   value,
   subtitle,
+  unit,
   icon,
   accent = false,
 }: {
   label: string
   value: string | number
   subtitle?: string
+  unit?: string
   icon?: ReactNode
   accent?: boolean
 }) {
@@ -38,7 +40,12 @@ export function StatCard({
             </span>
           ) : null}
         </div>
-        <div className="text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">{value}</div>
+        <div className="flex items-baseline gap-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+          {value}
+          {unit ? (
+            <span className="text-base font-medium text-[var(--color-muted-foreground)]">{unit}</span>
+          ) : null}
+        </div>
         {subtitle ? (
           <div className="-mt-1 text-xs text-[var(--color-muted-foreground)]">{subtitle}</div>
         ) : null}
