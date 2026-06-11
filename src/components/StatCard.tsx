@@ -40,7 +40,9 @@ export function StatCard({
             </span>
           ) : null}
         </div>
-        <div className="flex items-baseline gap-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+        {/* unit is rendered verbatim adjacent to value — include a leading space for
+            word-separated units (e.g. " days") or no space for attached symbols (e.g. "%") */}
+        <div className="flex items-baseline text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
           {value}
           {unit ? (
             <span className="text-base font-medium text-[var(--color-muted-foreground)]">{unit}</span>

@@ -263,6 +263,19 @@ describe('rangeFilter', () => {
     ]
     expect(rangeFilter(apps, '7d')).toHaveLength(1)
   })
+
+  it('"7d" includes an app applied 6 days ago (within >= cutoff boundary)', () => {
+    // daysAgo(7) sets noon 7 days ago; because rangeFilter calls Date.now() internally
+    // the cutoff is "now - 7*DAY" at call time, which is noon minus a few ms, so noon-7d
+    // sits just outside. daysAgo(6) is unambiguously inside the window.
+    const apps = [app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(6)) })]
+    expect(rangeFilter(apps, '7d')).toHaveLength(1)
+  })
+
+  it('"7d" excludes an app applied 8 days ago', () => {
+    const apps = [app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(8)) })]
+    expect(rangeFilter(apps, '7d')).toHaveLength(0)
+  })
 })
 
 describe('upcomingDeadlines', () => {
