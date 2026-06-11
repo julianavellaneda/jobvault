@@ -1,17 +1,16 @@
-import { LogOut, Moon, Sun } from 'lucide-react'
+import { Columns3, LayoutDashboard, List, LogOut, Moon, Plus, Settings, Sun, Target, Inbox } from 'lucide-react'
 import type { AuthUser } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export type View = 'dashboard' | 'applications' | 'kanban' | 'pending' | 'add' | 'settings'
 
-const TABS: { id: View; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'applications', label: 'Applications' },
-  { id: 'kanban', label: 'Kanban' },
-  { id: 'pending', label: 'Pending' },
-  { id: 'add', label: 'Add Links' },
-  { id: 'settings', label: 'Settings' },
+const TABS: { id: View; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'applications', label: 'Applications', Icon: List },
+  { id: 'kanban', label: 'Kanban', Icon: Columns3 },
+  { id: 'pending', label: 'Pending', Icon: Inbox },
+  { id: 'add', label: 'Add Links', Icon: Plus },
+  { id: 'settings', label: 'Settings', Icon: Settings },
 ]
 
 export function Nav({
@@ -31,62 +30,83 @@ export function Nav({
   onToggleDark: () => void
   pendingCount: number
 }) {
-  const tabs = (
-    <nav className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {TABS.map(t => (
-        <button
-          key={t.id}
-          onClick={() => onView(t.id)}
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
-            view === t.id
-              ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-inset ring-[var(--color-primary)]/25'
-              : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]/40 hover:text-[var(--color-foreground)]',
-          )}
-        >
-          {t.label}
-          {t.id === 'pending' && pendingCount > 0 ? (
-            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--color-primary)] px-1.5 text-[10px] font-semibold text-[var(--color-primary-foreground)]">
-              {pendingCount}
-            </span>
-          ) : null}
-        </button>
-      ))}
-    </nav>
-  )
-
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--color-border)]/60 bg-[var(--color-background)]/70 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-4 py-3">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo.svg"
-              alt="Jobvault"
-              className="h-7 w-auto"
-            />
-            <span className="bg-gradient-to-r from-[var(--color-foreground)] to-[var(--color-foreground)]/70 bg-clip-text text-base font-semibold tracking-tight text-transparent">
-              Jobvault
-            </span>
-          </div>
-          <div className="hidden md:block">{tabs}</div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onToggleDark} title="Toggle theme">
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
-            {user ? (
-              <div className="flex items-center gap-2">
-                <span className="hidden text-xs text-[var(--color-muted-foreground)] sm:inline">
-                  {user.username}
-                </span>
-                <Button variant="ghost" size="icon" onClick={onSignOut} title="Sign out">
-                  <LogOut className="size-4" />
-                </Button>
-              </div>
-            ) : null}
-          </div>
+    <header className="sticky top-0 z-40 border-b border-[var(--color-border-soft)] bg-[var(--color-background)]/72 backdrop-blur-[16px] backdrop-saturate-150">
+      <div className="mx-auto flex h-[62px] max-w-[1500px] items-center gap-[22px] px-[26px]">
+        {/* Brand */}
+        <div className="flex shrink-0 items-center gap-[11px]">
+          <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-[linear-gradient(150deg,var(--color-primary-strong),var(--color-accent2))] text-white shadow-[0_4px_14px_-4px_var(--color-primary),inset_0_1px_0_oklch(1_0_0/0.25)]">
+            <Target className="size-[18px]" />
+          </span>
+          <span className="text-base font-semibold tracking-[-0.02em]">
+            Jobvault
+          </span>
         </div>
-        <div className="-mx-4 mt-2 px-4 md:hidden">{tabs}</div>
+
+        {/* Pill nav */}
+        <nav className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {TABS.map(t => {
+            const active = view === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => onView(t.id)}
+                className={cn(
+                  'relative inline-flex items-center gap-[7px] rounded-[9px] px-[13px] py-2 text-[13.5px] font-medium transition-colors',
+                  active
+                    ? 'bg-primary-soft text-foreground ring-1 ring-inset ring-primary-line'
+                    : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                )}
+              >
+                <t.Icon
+                  className={cn(
+                    'size-4',
+                    active ? 'text-primary-strong opacity-100' : 'opacity-85',
+                  )}
+                />
+                <span className="max-[720px]:hidden">{t.label}</span>
+                {t.id === 'pending' && pendingCount > 0 ? (
+                  <span className="grid min-w-[18px] place-items-center rounded-full bg-[var(--color-primary)] px-[5px] py-0 text-[10.5px] font-bold tabular-nums text-[var(--color-primary-foreground)] h-[18px]">
+                    {pendingCount}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Right cluster */}
+        <div className="ml-auto flex items-center gap-3">
+          {/* Theme toggle */}
+          <button
+            onClick={onToggleDark}
+            title="Toggle theme"
+            className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground"
+          >
+            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+
+          {/* User chip */}
+          {user ? (
+            <div className="flex items-center gap-[9px] rounded-full border border-border bg-surface py-1 pl-[11px] pr-1">
+              <span className="max-[480px]:hidden text-[12.5px] text-muted-foreground">
+                {user.username}
+              </span>
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-[linear-gradient(150deg,var(--color-primary-strong),var(--color-accent2))] text-xs font-semibold text-white">
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          ) : null}
+
+          {/* Sign out */}
+          <button
+            onClick={onSignOut}
+            title="Sign out"
+            className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </div>
       </div>
     </header>
   )
