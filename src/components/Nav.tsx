@@ -1,10 +1,14 @@
 import { Columns3, LayoutDashboard, List, LogOut, Moon, Plus, Settings, Sun, Target, Inbox } from 'lucide-react'
+import type { ComponentType } from 'react'
 import type { AuthUser } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 export type View = 'dashboard' | 'applications' | 'kanban' | 'pending' | 'add' | 'settings'
 
-const TABS: { id: View; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+const ICON_BTN =
+  'grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground'
+
+const TABS: { id: View; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { id: 'applications', label: 'Applications', Icon: List },
   { id: 'kanban', label: 'Kanban', Icon: Columns3 },
@@ -50,9 +54,10 @@ export function Nav({
             return (
               <button
                 key={t.id}
+                type="button"
                 onClick={() => onView(t.id)}
                 className={cn(
-                  'relative inline-flex items-center gap-[7px] rounded-[9px] px-[13px] py-2 text-[13.5px] font-medium transition-colors',
+                  'inline-flex items-center gap-[7px] rounded-[9px] px-[13px] py-2 text-[13.5px] font-medium transition-colors',
                   active
                     ? 'bg-primary-soft text-foreground ring-1 ring-inset ring-primary-line'
                     : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
@@ -78,11 +83,7 @@ export function Nav({
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-3">
           {/* Theme toggle */}
-          <button
-            onClick={onToggleDark}
-            title="Toggle theme"
-            className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground"
-          >
+          <button type="button" onClick={onToggleDark} title="Toggle theme" className={ICON_BTN}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
 
@@ -99,11 +100,7 @@ export function Nav({
           ) : null}
 
           {/* Sign out */}
-          <button
-            onClick={onSignOut}
-            title="Sign out"
-            className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-surface-2 hover:text-foreground"
-          >
+          <button type="button" onClick={onSignOut} title="Sign out" className={ICON_BTN}>
             <LogOut className="size-4" />
           </button>
         </div>
