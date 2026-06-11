@@ -18,6 +18,7 @@
   --bg:        oklch(0.985 0.004 280);
   --bg-grad-a: oklch(0.55 0.22 280 / 0.10);
   --bg-grad-b: oklch(0.62 0.20 305 / 0.07);
+  /* panel = nav/topbar base; surface = card/popover. (identical in light, layered in dark) */
   --panel:     oklch(1 0 0);
   --surface:   oklch(1 0 0);
   --surface-2: oklch(0.97 0.006 280);
@@ -172,6 +173,8 @@
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   /* shadcn `muted` = background; `muted-foreground` = text. */
+  /* dim text -> text-muted-foreground or text-faint; bg surface -> bg-muted.
+     NOTE: no text-muted (it's a bg) and no text-fg (use text-foreground). */
   --color-muted: var(--muted-bg);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
