@@ -154,3 +154,41 @@ export function backlogBurndown(apps: Application[], days = 30): { date: string;
 export function pendingCount(apps: Application[]): number {
   return apps.filter(a => a.status === 'pending').length
 }
+
+export function statusCounts(apps: Application[]): Record<Status, number> {
+  const counts: Record<Status, number> = {
+    pending: 0,
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    rejected: 0,
+  }
+  for (const a of apps) counts[a.status] += 1
+  return counts
+}
+
+// Buckets are rolling 7-day windows ending today (by daysAgo // 7), not
+// calendar-aligned weeks — simpler and deterministic.
+export function submissionHeatmap(apps: Application[], weeks = 16): number[][] {
+  // 7 rows (Mon=0 … Sun=6) × weeks cols (col 0 = oldest, col weeks-1 = current)
+  const grid: number[][] = Array.from({ length: 7 }, () => Array(weeks).fill(0))
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (const a of apps) {
+    if (a.appliedAt == null) continue
+    const applied = new Date(a.appliedAt)
+    applied.setHours(0, 0, 0, 0)
+    const dayDiff = Math.floor((today.getTime() - applied.getTime()) / 86_400_000)
+    if (dayDiff < 0) continue
+    const weekFromEnd = Math.floor(dayDiff / 7)
+    if (weekFromEnd >= weeks) continue
+    const col = weeks - 1 - weekFromEnd
+    // JS: Sun=0..Sat=6 → Mon=0..Sun=6
+    const row = (applied.getDay() + 6) % 7
+    grid[row][col] += 1
+  }
+
+  return grid
+}

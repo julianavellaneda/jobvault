@@ -4,14 +4,15 @@ import { StatCard } from '@/components/StatCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ActivityChart,
-  BacklogChart,
+  BarList,
+  Donut,
   FunnelChart,
-  SourceBreakdown,
-  UserBreakdown,
-  WeekdayHeatmap,
+  Heatmap,
 } from '@/components/charts'
 import {
   appliedTodayCount,
+  bySource,
+  byUser,
   computeStreak,
   pendingCount,
   totalApplied,
@@ -56,6 +57,14 @@ export function Dashboard({ apps }: { apps: Application[] }) {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Donut apps={apps} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Funnel</CardTitle>
           </CardHeader>
           <CardContent>
@@ -64,26 +73,22 @@ export function Dashboard({ apps }: { apps: Application[] }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Backlog burn-down (30d)</CardTitle>
+            <CardTitle>Submission heatmap</CardTitle>
           </CardHeader>
           <CardContent>
-            <BacklogChart apps={apps} />
+            <Heatmap apps={apps} />
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Weekday heatmap</CardTitle>
+            <CardTitle>Top sources</CardTitle>
           </CardHeader>
           <CardContent>
-            <WeekdayHeatmap apps={apps} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>By source</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SourceBreakdown apps={apps} />
+            <BarList
+              data={bySource(apps)}
+              getLabel={s => s.source}
+              getValue={s => s.total}
+            />
           </CardContent>
         </Card>
         <Card>
@@ -91,7 +96,12 @@ export function Dashboard({ apps }: { apps: Application[] }) {
             <CardTitle>Contributors</CardTitle>
           </CardHeader>
           <CardContent>
-            <UserBreakdown apps={apps} />
+            <BarList
+              data={byUser(apps)}
+              getLabel={u => u.name}
+              getValue={u => u.added}
+              accent="linear-gradient(90deg, var(--color-accent2), var(--color-primary))"
+            />
           </CardContent>
         </Card>
       </div>

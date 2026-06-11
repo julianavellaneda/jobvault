@@ -6,6 +6,8 @@ import {
   computeStreak,
   funnelCounts,
   pendingCount,
+  statusCounts,
+  submissionHeatmap,
   totalApplied,
 } from './stats'
 
@@ -137,5 +139,72 @@ describe('pendingCount', () => {
       app({ id: '3', status: 'applied' }),
     ]
     expect(pendingCount(apps)).toBe(2)
+  })
+})
+
+describe('statusCounts', () => {
+  it('returns exact counts per status including zeros', () => {
+    const apps = [
+      app({ id: '1', status: 'pending' }),
+      app({ id: '2', status: 'pending' }),
+      app({ id: '3', status: 'applied' }),
+      app({ id: '4', status: 'interview' }),
+      app({ id: '5', status: 'interview' }),
+      app({ id: '6', status: 'rejected' }),
+    ]
+    const out = statusCounts(apps)
+    expect(out.pending).toBe(2)
+    expect(out.applied).toBe(1)
+    expect(out.interview).toBe(2)
+    expect(out.offer).toBe(0)
+    expect(out.rejected).toBe(1)
+  })
+
+  it('returns all zeros for empty input', () => {
+    const out = statusCounts([])
+    expect(out).toEqual({ pending: 0, applied: 0, interview: 0, offer: 0, rejected: 0 })
+  })
+})
+
+describe('submissionHeatmap', () => {
+  it('returns a 7×weeks grid of zeros for empty apps', () => {
+    const weeks = 4
+    const grid = submissionHeatmap([], weeks)
+    expect(grid.length).toBe(7)
+    for (const row of grid) {
+      expect(row.length).toBe(weeks)
+      expect(row.every(v => v === 0)).toBe(true)
+    }
+  })
+
+  it('places an app applied today into the last column at the correct weekday row', () => {
+    const weeks = 4
+    const today = daysAgo(0)
+    const a = app({ id: '1', status: 'applied', appliedAt: ts(today) })
+    const grid = submissionHeatmap([a], weeks)
+    // last column is weeks-1
+    const expectedCol = weeks - 1
+    // Mon=0..Sun=6
+    const expectedRow = (today.getDay() + 6) % 7
+    expect(grid[expectedRow][expectedCol]).toBe(1)
+    // total across grid should be exactly 1
+    const total = grid.flat().reduce((s, v) => s + v, 0)
+    expect(total).toBe(1)
+  })
+
+  it('ignores apps outside the window', () => {
+    const weeks = 4
+    // appliedAt is weeks*7 + 1 days ago — just outside the window
+    const outsideApp = app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(weeks * 7 + 1)) })
+    const grid = submissionHeatmap([outsideApp], weeks)
+    const total = grid.flat().reduce((s, v) => s + v, 0)
+    expect(total).toBe(0)
+  })
+
+  it('rows do not alias each other (mutating one row does not affect another)', () => {
+    const weeks = 4
+    const grid = submissionHeatmap([], weeks)
+    grid[0][0] = 99
+    expect(grid[1][0]).toBe(0)
   })
 })

@@ -1,128 +1,126 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { useId } from 'react'
 import type { Application } from '@/types'
-import {
-  backlogBurndown,
-  bySource,
-  byUser,
-  dailyCounts,
-  funnelCounts,
-  weekdayHeatmap,
-} from '@/lib/stats'
+import type { Status } from '@/types'
+import { STATUSES, STATUS_LABELS } from '@/types'
+import { dailyCounts, funnelCounts, statusCounts, submissionHeatmap } from '@/lib/stats'
 
-const tooltipStyle = {
-  background: 'var(--color-popover)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 8,
-  fontSize: 12,
-  color: 'var(--color-popover-foreground)',
-  boxShadow: '0 8px 24px -8px oklch(0 0 0 / 0.4)',
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const STATUS_COLORS: Record<Status, string> = {
+  pending: 'var(--color-st-pending)',
+  applied: 'var(--color-st-applied)',
+  interview: 'var(--color-st-interview)',
+  offer: 'var(--color-st-offer)',
+  rejected: 'var(--color-st-rejected)',
 }
 
-const CHART_PALETTE = [
-  'var(--color-chart-1)',
-  'var(--color-chart-2)',
-  'var(--color-chart-3)',
-  'var(--color-chart-4)',
-  'var(--color-chart-5)',
-]
+// Maps funnel stage label → status key (for color lookup)
+const STAGE_STATUS: Record<string, Status> = {
+  Applied: 'applied',
+  Interview: 'interview',
+  Offer: 'offer',
+}
+
+// ── ActivityChart ─────────────────────────────────────────────────────────────
 
 export function ActivityChart({ apps }: { apps: Application[] }) {
+  const gid = useId()
   const data = dailyCounts(apps, 30)
+  const W = 560
+  const H = 150
+  const pad = 6
+  const max = Math.max(1, ...data.map(d => d.count))
+  const bw = (W - pad * 2) / data.length
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+    <div className="flex flex-col gap-1">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ width: '100%', height: 150 }}
+      >
         <defs>
-          <linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.95} />
-            <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0.35} />
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-primary-strong)" />
+            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0.5} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-        <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis allowDecimals={false} stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--color-primary)', opacity: 0.08 }} />
-        <Bar dataKey="count" fill="url(#activityFill)" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+        {[0.25, 0.5, 0.75, 1].map((g, i) => (
+          <line
+            key={i}
+            x1={pad}
+            x2={W - pad}
+            y1={H - g * (H - 20)}
+            y2={H - g * (H - 20)}
+            stroke="var(--color-border-soft)"
+            strokeWidth={1}
+          />
+        ))}
+        {data.map((d, i) => {
+          const h = (d.count / max) * (H - 24)
+          const x = pad + i * bw + bw * 0.18
+          const w = bw * 0.64
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={H - Math.max(h, d.count ? 2 : 0)}
+              width={w}
+              height={Math.max(h, d.count ? 2 : 0)}
+              rx={2.5}
+              fill={d.count ? `url(#${gid})` : 'var(--color-surface-3)'}
+              opacity={d.count ? 1 : 0.6}
+            />
+          )
+        })}
+      </svg>
+      <div className="flex justify-between px-1 text-[10px] text-[var(--color-faint)]">
+        <span>30 days ago</span>
+        <span>today</span>
+      </div>
+    </div>
   )
 }
+
+// ── FunnelChart ───────────────────────────────────────────────────────────────
 
 export function FunnelChart({ apps }: { apps: Application[] }) {
   const data = funnelCounts(apps)
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-        <XAxis type="number" allowDecimals={false} stroke="var(--color-muted-foreground)" fontSize={11} />
-        <YAxis dataKey="stage" type="category" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={56} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--color-primary)', opacity: 0.08 }} />
-        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  )
-}
-
-export function BacklogChart({ apps }: { apps: Application[] }) {
-  const data = backlogBurndown(apps, 30)
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-        <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis allowDecimals={false} stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Line
-          type="monotone"
-          dataKey="backlog"
-          stroke="var(--color-chart-5)"
-          strokeWidth={2.5}
-          dot={false}
-          activeDot={{ r: 4, fill: 'var(--color-chart-5)', stroke: 'var(--color-background)', strokeWidth: 2 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  )
-}
-
-export function WeekdayHeatmap({ apps }: { apps: Application[] }) {
-  const data = weekdayHeatmap(apps)
   const max = Math.max(1, ...data.map(d => d.count))
+  const first = data[0]
+
   return (
-    <div className="grid grid-cols-7 gap-1 sm:gap-2">
-      {data.map(d => {
-        const intensity = d.count / max
-        const isPeak = d.count > 0 && d.count === max
+    <div className="flex flex-col gap-3">
+      {data.map((d, i) => {
+        const pct = (d.count / max) * 100
+        const conv =
+          i === 0 || !first || first.count === 0
+            ? 100
+            : Math.round((d.count / first.count) * 100)
+        const status = STAGE_STATUS[d.stage] ?? 'applied'
+        const color = STATUS_COLORS[status]
+
         return (
-          <div key={d.day} className="flex flex-col items-center gap-1 sm:gap-1.5">
-            <div
-              className={
-                'flex h-12 w-full items-center justify-center rounded-md border border-[var(--color-border)] text-xs font-semibold tabular-nums transition-colors sm:h-16 sm:text-sm ' +
-                (isPeak ? 'ring-1 ring-inset ring-[var(--color-primary)]/40' : '')
-              }
-              style={{
-                background: `color-mix(in oklch, var(--color-chart-1) ${Math.round(15 + 75 * intensity)}%, transparent)`,
-                color: intensity > 0.5 ? 'oklch(0.99 0.005 265)' : 'var(--color-foreground)',
-              }}
-              title={`${d.day}: ${d.count}`}
-            >
-              {d.count || ''}
+          <div key={d.stage} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full shrink-0"
+                  style={{ background: color }}
+                />
+                {d.stage}
+              </span>
+              <span className="tabular-nums">
+                {d.count}{' '}
+                <span className="text-[var(--color-faint)]">· {conv}%</span>
+              </span>
             </div>
-            <div className="text-[10px] text-[var(--color-muted-foreground)] sm:text-xs">{d.day}</div>
+            <div className="h-2 w-full rounded-full bg-[var(--color-surface-3)]">
+              <div
+                className="h-2 rounded-full transition-all"
+                style={{ width: pct + '%', background: color }}
+              />
+            </div>
           </div>
         )
       })}
@@ -130,45 +128,203 @@ export function WeekdayHeatmap({ apps }: { apps: Application[] }) {
   )
 }
 
-export function SourceBreakdown({ apps }: { apps: Application[] }) {
-  const data = bySource(apps).slice(0, 8)
-  if (data.length === 0) {
-    return <div className="text-sm text-[var(--color-muted-foreground)]">No data yet.</div>
-  }
+// ── Donut ─────────────────────────────────────────────────────────────────────
+
+export function Donut({ apps }: { apps: Application[] }) {
+  const counts = statusCounts(apps)
+  const total = STATUSES.reduce((s, st) => s + counts[st], 0)
+  const safeTotal = total || 1
+  const R = 52
+  const C = 2 * Math.PI * R
+
+  // Pre-compute cumulative fractions without mutating within .map
+  const fracs = STATUSES.map(status => counts[status] / safeTotal)
+  const arcs = STATUSES.map((status, i) => {
+    const frac = fracs[i]
+    const dash = frac * C
+    const runningAcc = fracs.slice(0, i).reduce((s, f) => s + f, 0)
+    const offset = -runningAcc * C
+    return { status, frac, dash, offset }
+  })
+
   return (
-    <ResponsiveContainer width="100%" height={Math.max(180, data.length * 32)}>
-      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-        <XAxis type="number" allowDecimals={false} stroke="var(--color-muted-foreground)" fontSize={11} />
-        <YAxis dataKey="source" type="category" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={72} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--color-primary)', opacity: 0.08 }} />
-        <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+      <svg viewBox="0 0 140 140" style={{ width: 140, height: 140, flexShrink: 0 }}>
+        {/* base track */}
+        <circle
+          cx={70}
+          cy={70}
+          r={R}
+          fill="none"
+          stroke="var(--color-surface-3)"
+          strokeWidth={16}
+        />
+        {arcs.map(({ status, dash, offset }) => (
+          <circle
+            key={status}
+            cx={70}
+            cy={70}
+            r={R}
+            fill="none"
+            stroke={STATUS_COLORS[status]}
+            strokeWidth={16}
+            strokeDasharray={`${dash} ${C - dash}`}
+            strokeDashoffset={offset}
+            transform="rotate(-90 70 70)"
+            strokeLinecap="butt"
+          />
+        ))}
+        <text
+          x={70}
+          y={64}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={22}
+          fontWeight={700}
+          fill="var(--color-foreground)"
+        >
+          {total}
+        </text>
+        <text
+          x={70}
+          y={82}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={11}
+          fill="var(--color-muted-foreground)"
+        >
+          total
+        </text>
+      </svg>
+      <div className="flex flex-col gap-1.5 text-sm min-w-0">
+        {STATUSES.map(status => (
+          <div key={status} className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full shrink-0"
+              style={{ background: STATUS_COLORS[status] }}
+            />
+            <span className="flex-1 text-[var(--color-foreground)]">
+              {STATUS_LABELS[status]}
+            </span>
+            <span className="tabular-nums text-[var(--color-muted-foreground)]">
+              {counts[status]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
-export function UserBreakdown({ apps }: { apps: Application[] }) {
-  const data = byUser(apps)
+// ── BarList ───────────────────────────────────────────────────────────────────
+
+export function BarList<T>({
+  data,
+  getLabel,
+  getValue,
+  accent,
+}: {
+  data: T[]
+  getLabel: (d: T) => string
+  getValue: (d: T) => number
+  accent?: string
+}) {
   if (data.length === 0) {
-    return <div className="text-sm text-[var(--color-muted-foreground)]">No contributions yet.</div>
+    return (
+      <p className="text-sm text-[var(--color-muted-foreground)]">No data yet.</p>
+    )
   }
+
+  const max = Math.max(1, ...data.map(getValue))
+  const fill = accent ?? 'linear-gradient(90deg, var(--color-primary), var(--color-accent2))'
+
   return (
-    <ul className="space-y-2">
-      {data.map(u => (
-        <li
-          key={u.name}
-          className="flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-background)]/40 px-3 py-2 text-sm transition-colors hover:border-[var(--color-primary)]/30"
-        >
-          <span className="font-medium">{u.name}</span>
-          <span className="text-[var(--color-muted-foreground)]">
-            {u.added} added · {u.applied} applied
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2">
+      {data.map(d => {
+        const label = getLabel(d)
+        const value = getValue(d)
+        const pct = (value / max) * 100
+        return (
+          <div key={label} className="flex items-center gap-2 text-sm">
+            <span
+              className="w-28 shrink-0 truncate text-[var(--color-foreground)]"
+              title={label}
+            >
+              {label}
+            </span>
+            <div className="flex-1 h-2 rounded-full bg-[var(--color-surface-3)]">
+              <div
+                className="h-2 rounded-full"
+                style={{ width: pct + '%', background: fill }}
+              />
+            </div>
+            <span className="tabular-nums text-[var(--color-muted-foreground)] w-8 text-right">
+              {value}
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+
+const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+// color-mix percentages for levels 0–3
+const LEVEL_MIX = [8, 35, 62, 90]
+
+export function Heatmap({ apps }: { apps: Application[] }) {
+  const weeks = 16
+  const grid = submissionHeatmap(apps, weeks)
+  const max = Math.max(1, ...grid.flat())
+
+  function cellLevel(count: number): number {
+    if (count === 0) return 0
+    const ratio = count / max
+    return ratio <= 1 / 3 ? 1 : ratio <= 2 / 3 ? 2 : 3
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {grid.map((row, d) => (
+        <div key={d} className="flex items-center gap-1">
+          <span className="w-3 shrink-0 text-[10px] text-[var(--color-faint)] select-none">
+            {WEEKDAY_LABELS[d]}
+          </span>
+          <div className="flex gap-1">
+            {row.map((count, w) => {
+              const level = cellLevel(count)
+              const mix = LEVEL_MIX[level]
+              return (
+                <span
+                  key={w}
+                  className="h-2.5 w-2.5 rounded-[3px]"
+                  title={`${count}`}
+                  style={{
+                    background: `color-mix(in oklch, var(--color-primary) ${mix}%, transparent)`,
+                  }}
+                />
+              )
+            })}
+          </div>
+        </div>
+      ))}
+      {/* legend */}
+      <div className="mt-1 flex items-center gap-1 text-[10px] text-[var(--color-faint)]">
+        <span>Less</span>
+        {LEVEL_MIX.map((mix, i) => (
+          <span
+            key={i}
+            className="h-2.5 w-2.5 rounded-[3px]"
+            style={{
+              background: `color-mix(in oklch, var(--color-primary) ${mix}%, transparent)`,
+            }}
+          />
+        ))}
+        <span>More</span>
+      </div>
+    </div>
+  )
+}
+
