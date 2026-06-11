@@ -201,6 +201,20 @@ describe('submissionHeatmap', () => {
     expect(total).toBe(0)
   })
 
+  it('excludes an app applied exactly weeks*7 days ago (boundary)', () => {
+    const weeks = 4
+    const boundaryApp = app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(weeks * 7)) })
+    const grid = submissionHeatmap([boundaryApp], weeks)
+    expect(grid.flat().reduce((s, v) => s + v, 0)).toBe(0)
+  })
+
+  it('ignores an app with a future appliedAt (dayDiff < 0 guard)', () => {
+    const weeks = 4
+    const futureApp = app({ id: '1', status: 'applied', appliedAt: ts(daysAgo(-3)) })
+    const grid = submissionHeatmap([futureApp], weeks)
+    expect(grid.flat().reduce((s, v) => s + v, 0)).toBe(0)
+  })
+
   it('rows do not alias each other (mutating one row does not affect another)', () => {
     const weeks = 4
     const grid = submissionHeatmap([], weeks)

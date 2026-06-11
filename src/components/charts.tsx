@@ -1,6 +1,5 @@
 import { useId } from 'react'
-import type { Application } from '@/types'
-import type { Status } from '@/types'
+import type { Application, Status } from '@/types'
 import { STATUSES, STATUS_LABELS } from '@/types'
 import { dailyCounts, funnelCounts, statusCounts, submissionHeatmap } from '@/lib/stats'
 
