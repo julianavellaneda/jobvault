@@ -5,6 +5,7 @@ import { STATUSES, STATUS_LABELS } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Chip } from '@/components/ui/Chip'
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ApplicationRow } from '@/components/ApplicationRow'
+import { ApplicationRow, ROW_GRID } from '@/components/ApplicationRow'
 import {
   defaultSortDir,
   groupApps,
@@ -133,17 +134,28 @@ export function Applications({
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
       <div className="flex flex-col gap-3">
+        {/* Page head */}
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
-          <span className="text-sm text-[var(--color-muted-foreground)]">
+          <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-sm tabular-nums text-[var(--color-muted-foreground)]">
             {filtered.length}/{apps.length}
           </span>
         </div>
 
+        {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by company, role, url, notes…"
+              className="pl-8"
+            />
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs uppercase tracking-wider text-[var(--color-muted-foreground)]">
-              Group by
+              Group
             </span>
             <Select value={groupBy} onValueChange={v => setGroupBy(v as GroupBy)}>
               <SelectTrigger className="h-8 w-[140px]">
@@ -159,7 +171,7 @@ export function Applications({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs uppercase tracking-wider text-[var(--color-muted-foreground)]">
-              Sort by
+              Sort
             </span>
             <Select value={sortBy} onValueChange={v => handleSortByChange(v as SortBy)}>
               <SelectTrigger className="h-8 w-[160px]">
@@ -184,19 +196,12 @@ export function Applications({
           </div>
         </div>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by company, role, url, notes…"
-            className="pl-8"
-          />
-        </div>
+        {/* Filter chips */}
         <FilterChips
           label="Status"
           options={STATUSES}
           getLabel={s => STATUS_LABELS[s]}
+          getDot={s => STATUS_DOT[s]}
           active={activeStatuses}
           onToggle={v => toggle(activeStatuses, v, setActiveStatuses)}
         />
@@ -239,6 +244,33 @@ export function Applications({
             </div>
           ) : (
             <div>
+              {/* Desktop-only list header — shares ROW_GRID with CompactRow */}
+              <div
+                className={cn(
+                  ROW_GRID,
+                  'hidden border-l-4 border-transparent px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)] md:grid',
+                )}
+              >
+                {/* chevron placeholder */}
+                <span />
+                {/* monogram placeholder */}
+                <span />
+                {/* company / role */}
+                <span>Company / Role</span>
+                {/* salary */}
+                <span>Salary</span>
+                {/* location */}
+                <span>Location</span>
+                {/* tags */}
+                <span>Tags</span>
+                {/* status */}
+                <span>Status</span>
+                {/* added */}
+                <span>Added</span>
+                {/* ext-link placeholder */}
+                <span />
+              </div>
+
               {groups.map(g => {
                 const isCollapsed = collapsedGroups.has(g.key)
                 const showHeader = groupBy !== 'none'
@@ -296,12 +328,14 @@ function FilterChips<T>({
   label,
   options,
   getLabel,
+  getDot,
   active,
   onToggle,
 }: {
   label: string
   options: T[]
   getLabel: (v: T) => string
+  getDot?: (v: T) => string
   active: Set<T>
   onToggle: (v: T) => void
 }) {
@@ -310,23 +344,16 @@ function FilterChips<T>({
       <span className="text-xs uppercase tracking-wider text-[var(--color-muted-foreground)]">
         {label}
       </span>
-      {options.map(o => {
-        const isActive = active.has(o)
-        return (
-          <button
-            key={String(o)}
-            onClick={() => onToggle(o)}
-            className={cn(
-              'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
-              isActive
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
-                : 'hover:bg-[var(--color-accent)]',
-            )}
-          >
-            {getLabel(o)}
-          </button>
-        )
-      })}
+      {options.map(o => (
+        <Chip
+          key={String(o)}
+          active={active.has(o)}
+          onClick={() => onToggle(o)}
+          dot={getDot ? getDot(o) : undefined}
+        >
+          {getLabel(o)}
+        </Chip>
+      ))}
     </div>
   )
 }

@@ -6,7 +6,8 @@ import type { Application, Status, WorkArrangement } from '@/types'
 import { STATUSES, WORK_ARRANGEMENTS, STATUS_LABELS } from '@/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/StatusBadge'
+import { Monogram } from '@/components/ui/Monogram'
+import { StatusPill } from '@/components/ui/StatusPill'
 import { hostnameOf } from '@/lib/urls'
 import { useDebouncedSaver, useReconciledDraft } from '@/lib/hooks'
 import { formatShortDate } from '@/lib/applicationsView'
@@ -20,6 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
+// Shared grid template used by both the desktop CompactRow and the Applications list-head.
+// columns: chevron | monogram | company/role | salary | location | tags | status | added | ext-link
+export const ROW_GRID =
+  'grid grid-cols-[16px_30px_minmax(0,1fr)_90px_120px_minmax(0,140px)_120px_90px_24px] items-center gap-3'
 
 type FieldUpdate = Partial<Pick<Application, 'company' | 'role' | 'salary' | 'location' | 'source' | 'notes' | 'tags'>>
 
@@ -133,44 +139,71 @@ function CompactRow({
         className="flex w-full cursor-pointer items-center gap-2 px-3 py-3 text-left hover:bg-[var(--color-accent)]/40 md:hidden"
       >
         <ChevronRight className="size-4 shrink-0 text-[var(--color-muted-foreground)]" />
+        <Monogram name={app.company} sm />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{app.company || 'Untitled'}</div>
           {app.role ? (
             <div className="truncate text-xs text-[var(--color-muted-foreground)]">{app.role}</div>
           ) : null}
         </div>
-        <StatusBadge status={app.status} className="text-[11px]" />
+        <StatusPill status={app.status} />
       </div>
 
-      {/* Desktop: single line compact */}
+      {/* Desktop: single-line grid aligned with list-head */}
       <div
         role="button"
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={onKeyDown}
-        className="hidden w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--color-accent)]/40 md:flex"
+        className={cn(
+          ROW_GRID,
+          'hidden w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-[var(--color-accent)]/40 md:grid',
+        )}
       >
-        <ChevronRight className="size-4 shrink-0 text-[var(--color-muted-foreground)]" />
-        <span className="min-w-0 flex-1 truncate font-medium">{app.company || 'Untitled'}</span>
-        {app.role ? (
-          <>
-            <span className="text-[var(--color-muted-foreground)]">·</span>
-            <span className="min-w-0 max-w-[30%] truncate text-[var(--color-muted-foreground)]">
-              {app.role}
+        {/* chevron */}
+        <ChevronRight className="size-4 text-[var(--color-muted-foreground)]" />
+        {/* monogram */}
+        <Monogram name={app.company} sm />
+        {/* company / role */}
+        <div className="min-w-0">
+          <div className="truncate font-medium">{app.company || 'Untitled'}</div>
+          {app.role ? (
+            <div className="truncate text-xs text-[var(--color-muted-foreground)]">{app.role}</div>
+          ) : null}
+        </div>
+        {/* salary */}
+        <span className="tabular-nums truncate text-xs text-[var(--color-muted-foreground)]">
+          {app.salary || '—'}
+        </span>
+        {/* location */}
+        <span className="truncate text-xs text-[var(--color-muted-foreground)]">
+          {app.location || '—'}
+        </span>
+        {/* tags (up to 2) */}
+        <div className="flex flex-wrap gap-1 min-w-0">
+          {app.tags.slice(0, 2).map(t => (
+            <span
+              key={t}
+              className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] text-[var(--color-muted-foreground)] truncate"
+            >
+              {t}
             </span>
-          </>
-        ) : null}
-        <StatusBadge status={app.status} className="shrink-0 text-[11px]" />
-        <span className="hidden shrink-0 text-xs tabular-nums text-[var(--color-muted-foreground)] sm:inline">
+          ))}
+        </div>
+        {/* status */}
+        <StatusPill status={app.status} />
+        {/* added date */}
+        <span className="tabular-nums text-xs text-[var(--color-muted-foreground)]">
           {formatShortDate(app.createdAt)}
         </span>
+        {/* external link */}
         <a
           href={app.url}
           target="_blank"
           rel="noopener noreferrer"
           onClick={e => e.stopPropagation()}
           onKeyDown={e => e.stopPropagation()}
-          className="shrink-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          className="text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
           title={app.url}
         >
           <ExternalLink className="size-3.5" />
@@ -232,7 +265,7 @@ function ExpandedRow({
     <Select value={app.status} onValueChange={v => void onUpdate(app.id, { status: v as Status })}>
       <SelectTrigger className="h-9">
         <SelectValue>
-          <StatusBadge status={app.status} className="text-[11px]" />
+          <StatusPill status={app.status} />
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -280,6 +313,7 @@ function ExpandedRow({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {collapseButton}
+            <Monogram name={app.company} sm />
             {hostLink}
           </div>
           <div className="w-32 shrink-0">{statusSelect}</div>
@@ -330,40 +364,139 @@ function ExpandedRow({
           onChange={row.queue}
           onBlur={() => void row.flush()}
         />
-        <div className="flex justify-end">{deleteButton}</div>
+        <div className="flex justify-between items-center gap-2">
+          <span className="text-[11px] text-[var(--color-faint)]">
+            Added by {app.addedByName} · {formatShortDate(app.createdAt)}
+          </span>
+          {deleteButton}
+        </div>
       </div>
 
-      {/* Desktop: 12-col grid */}
-      <div className="hidden grid-cols-12 gap-2 px-3 py-2 hover:bg-[var(--color-accent)]/40 md:grid">
-        <div className="col-span-3 flex items-center gap-2">
+      {/* Desktop: rich expanded layout */}
+      <div className="hidden flex-col gap-3 px-3 py-3 md:flex">
+        {/* Head row: collapse · monogram · company/role stacked · host link · status */}
+        <div className="flex items-center gap-3">
           {collapseButton}
+          <Monogram name={app.company} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <label>
+              <span className="sr-only">Company</span>
+              <EditableCell
+                field="company"
+                initial={app.company}
+                placeholder="Company"
+                onChange={row.queue}
+                onBlur={() => void row.flush()}
+                className="h-7 text-sm font-semibold"
+              />
+            </label>
+            <label>
+              <span className="sr-only">Role</span>
+              <EditableCell
+                field="role"
+                initial={app.role}
+                placeholder="Role"
+                onChange={row.queue}
+                onBlur={() => void row.flush()}
+                className="h-6 text-xs text-[var(--color-muted-foreground)]"
+              />
+            </label>
+          </div>
           {hostLink}
+          <div className="w-32 shrink-0">{statusSelect}</div>
         </div>
-        <div className="col-span-2">
-          <EditableCell field="company" initial={app.company} placeholder="Company" onChange={row.queue} onBlur={() => void row.flush()} />
+
+        {/* Field grid: 3-col for labeled fields */}
+        <div className="grid grid-cols-3 gap-3 pl-9">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Salary
+            </span>
+            <EditableCell
+              field="salary"
+              initial={app.salary}
+              placeholder="—"
+              onChange={row.queue}
+              onBlur={() => void row.flush()}
+              className="tabular-nums"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Location
+            </span>
+            <EditableCell
+              field="location"
+              initial={app.location}
+              placeholder="—"
+              onChange={row.queue}
+              onBlur={() => void row.flush()}
+            />
+          </label>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Arrangement
+            </span>
+            {workArrangementSelect}
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Source
+            </span>
+            <EditableCell
+              field="source"
+              initial={app.source}
+              placeholder="—"
+              onChange={row.queue}
+              onBlur={() => void row.flush()}
+            />
+          </label>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Applied
+            </span>
+            <span className="flex h-9 items-center px-3 text-sm tabular-nums text-[var(--color-muted-foreground)]">
+              {formatShortDate(app.appliedAt) || '—'}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Deadline
+            </span>
+            <span className="flex h-9 items-center px-3 text-sm tabular-nums text-[var(--color-muted-foreground)]">
+              {formatShortDate(app.deadline) || '—'}
+            </span>
+          </div>
         </div>
-        <div className="col-span-2">
-          <EditableCell field="role" initial={app.role} placeholder="Role" onChange={row.queue} onBlur={() => void row.flush()} />
-        </div>
-        <div className="col-span-1">
-          <EditableCell field="salary" initial={app.salary} placeholder="$" onChange={row.queue} onBlur={() => void row.flush()} />
-        </div>
-        <div className="col-span-1">
-          <EditableCell field="location" initial={app.location} placeholder="Loc" onChange={row.queue} onBlur={() => void row.flush()} />
-        </div>
-        <div className="col-span-1">{workArrangementSelect}</div>
-        <div className="col-span-1">
-          <EditableCell field="source" initial={app.source} placeholder="Source" onChange={row.queue} onBlur={() => void row.flush()} />
-        </div>
-        <div className="col-span-1">{statusSelect}</div>
-        <div className="col-span-12 grid grid-cols-12 gap-2 pl-[25%]">
-          <div className="col-span-6">
+
+        {/* Wide row: tags + notes */}
+        <div className="grid grid-cols-2 gap-3 pl-9">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Tags
+            </span>
             <TagsCell tags={app.tags} onChange={row.queue} onBlur={() => void row.flush()} />
-          </div>
-          <div className="col-span-5">
-            <EditableCell field="notes" initial={app.notes} placeholder="Notes" onChange={row.queue} onBlur={() => void row.flush()} />
-          </div>
-          <div className="col-span-1 flex items-center justify-end">{deleteButton}</div>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-faint)]">
+              Notes
+            </span>
+            <EditableCell
+              field="notes"
+              initial={app.notes}
+              placeholder="Add a note…"
+              onChange={row.queue}
+              onBlur={() => void row.flush()}
+            />
+          </label>
+        </div>
+
+        {/* Footer: meta + delete */}
+        <div className="flex items-center justify-between pl-9">
+          <span className="text-[11px] text-[var(--color-faint)]">
+            Added by {app.addedByName} · {formatShortDate(app.createdAt)}
+          </span>
+          {deleteButton}
         </div>
       </div>
     </>
