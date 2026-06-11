@@ -24,11 +24,11 @@ type RemovePendingFn = (id: string) => Promise<void>
 type ApprovePendingFn = (id: string, app: NewApplication) => Promise<Application | null>
 type AppsMutateFn = (updater: (prev: Application[]) => Application[]) => void
 
-function StatusPill({ p }: { p: PendingUrl }) {
+function ExtractionBadge({ p }: { p: PendingUrl }) {
   if (p.extraction === 'loading') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[11px]">
-        <Loader2 className="size-3 animate-spin" /> extracting
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] text-[var(--color-muted-foreground)]">
+        <Loader2 className="size-3 animate-spin" /> Extracting…
       </span>
     )
   }
@@ -38,20 +38,20 @@ function StatusPill({ p }: { p: PendingUrl }) {
         title={p.extractError}
         className="inline-flex items-center gap-1 rounded-full bg-[var(--color-destructive)]/15 px-2 py-0.5 text-[11px] text-[var(--color-destructive)]"
       >
-        <TriangleAlert className="size-3" /> failed
+        <TriangleAlert className="size-3" /> Failed
       </span>
     )
   }
   if (p.extraction === 'done') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[11px]">
-        <Check className="size-3" /> ready
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[11px] text-[var(--color-primary)]">
+        <Check className="size-3" /> Extracted
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[11px] text-[var(--color-muted-foreground)]">
-      queued
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] text-[var(--color-muted-foreground)]">
+      Queued
     </span>
   )
 }
@@ -61,17 +61,20 @@ function ExtractedCell({
   onChange,
   onBlur,
   placeholder,
+  className,
 }: {
   remote: string
   onChange: (value: string) => void
   onBlur: () => void
   placeholder?: string
+  className?: string
 }) {
   const draft = useReconciledDraft(remote)
   return (
     <Input
       value={draft.value}
       placeholder={placeholder}
+      className={className}
       onFocus={draft.onFocus}
       onBlur={() => {
         draft.onBlur()
@@ -263,10 +266,10 @@ function PendingRow({
   return (
     <>
       {/* Mobile: stacked card */}
-      <div className="flex flex-col gap-2 border-b px-3 py-3 md:hidden">
+      <div className="flex flex-col gap-3 border-b border-[var(--color-border-soft)] px-4 py-4 md:hidden">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">{hostLink}</div>
-          <StatusPill p={p} />
+          <ExtractionBadge p={p} />
         </div>
         <ExtractedCell
           remote={p.extracted.company}
@@ -302,62 +305,73 @@ function PendingRow({
           />
         </div>
         {errorBlock}
-        <div className="flex justify-end gap-1">{actionButtons}</div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-[var(--color-faint)]">{p.addedByName}</span>
+          <div className="flex gap-1">{actionButtons}</div>
+        </div>
       </div>
 
-      {/* Desktop: existing 12-col grid */}
-      <div className="hidden grid-cols-12 gap-2 border-b px-3 py-3 hover:bg-[var(--color-accent)]/40 md:grid">
-        <div className="col-span-3 flex items-center gap-2">
-          {hostLink}
-          <StatusPill p={p} />
+      {/* Desktop: 12-col grid */}
+      <div className="hidden grid-cols-12 gap-2 border-b border-[var(--color-border-soft)] px-4 py-3 transition-colors hover:bg-[var(--color-surface-2)]/50 md:grid">
+        <div className="col-span-3 flex min-w-0 flex-col gap-1.5 justify-center">
+          <div className="flex items-center gap-2">
+            {hostLink}
+            <ExtractionBadge p={p} />
+          </div>
+          {p.addedByName && (
+            <span className="text-[10px] text-[var(--color-faint)]">
+              {p.addedByName}
+            </span>
+          )}
+          {errorBlock}
         </div>
-        <div className="col-span-2">
+        <div className="col-span-2 flex items-center">
           <ExtractedCell
             remote={p.extracted.company}
             placeholder="Company"
             onChange={v => queue('company', v)}
             onBlur={() => void saver.flush()}
+            className="w-full"
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-2 flex items-center">
           <ExtractedCell
             remote={p.extracted.role}
             placeholder="Role"
             onChange={v => queue('role', v)}
             onBlur={() => void saver.flush()}
+            className="w-full"
           />
         </div>
-        <div className="col-span-1">
+        <div className="col-span-1 flex items-center">
           <ExtractedCell
             remote={p.extracted.salary}
             placeholder="$"
             onChange={v => queue('salary', v)}
             onBlur={() => void saver.flush()}
+            className="w-full"
           />
         </div>
-        <div className="col-span-1">
+        <div className="col-span-1 flex items-center">
           <ExtractedCell
             remote={p.extracted.location}
             placeholder="Loc"
             onChange={v => queue('location', v)}
             onBlur={() => void saver.flush()}
+            className="w-full"
           />
         </div>
-        <div className="col-span-1">{workArrangementSelect}</div>
-        <div className="col-span-1">
+        <div className="col-span-1 flex items-center">{workArrangementSelect}</div>
+        <div className="col-span-1 flex items-center">
           <ExtractedCell
             remote={p.extracted.source}
             placeholder="Source"
             onChange={v => queue('source', v)}
             onBlur={() => void saver.flush()}
+            className="w-full"
           />
         </div>
         <div className="col-span-1 flex items-center justify-end gap-1">{actionButtons}</div>
-        {p.extraction === 'error' && p.extractError ? (
-          <div className="col-span-12 text-[11px] text-[var(--color-destructive)]">
-            {p.extractError}
-          </div>
-        ) : null}
       </div>
     </>
   )
@@ -380,15 +394,17 @@ export function Pending({
 }) {
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
-      <div className="flex items-baseline gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Pending</h1>
-        <span className="text-sm text-[var(--color-muted-foreground)]">
-          {pending.length} awaiting review
-        </span>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline gap-2.5">
+          <h1 className="text-2xl font-semibold tracking-tight">Pending</h1>
+          <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-sm tabular-nums text-[var(--color-muted-foreground)]">
+            {pending.length}
+          </span>
+        </div>
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Review extracted details, then approve to add them to your applications.
+        </p>
       </div>
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        Auto-extracted from each URL. Approve to move into Applications, or reject to discard.
-      </p>
       <Card>
         <CardContent className="p-0">
           {loading ? (
@@ -396,11 +412,16 @@ export function Pending({
               Loading…
             </div>
           ) : pending.length === 0 ? (
-            <div className="p-10 text-center text-sm text-[var(--color-muted-foreground)]">
-              Nothing pending. Paste links in Add Links to queue them up.
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+              <div className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-1 ring-inset ring-[var(--color-primary)]/20">
+                <Check className="size-5" />
+              </div>
+              <div className="text-sm text-[var(--color-muted-foreground)]">
+                Nothing pending. Paste links in Add Links to queue them up.
+              </div>
             </div>
           ) : (
-            <div className="divide-y">
+            <div>
               {pending.map(p => (
                 <PendingRow
                   key={p.id}
