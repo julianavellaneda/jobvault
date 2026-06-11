@@ -12,7 +12,9 @@ import { ExternalLink } from 'lucide-react'
 import type { Application, Status } from '@/types'
 import { STATUSES, STATUS_LABELS } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
+import { Monogram } from '@/components/ui/Monogram'
 import { hostnameOf } from '@/lib/urls'
+import { formatShortDate } from '@/lib/applicationsView'
 import { STATUS_COLUMN_TINT, STATUS_DOT } from '@/lib/statusColors'
 import { cn } from '@/lib/utils'
 
@@ -30,24 +32,67 @@ function KanbanCard({ app }: { app: Application }) {
       {...attributes}
       {...listeners}
       className={cn(
-        'cursor-grab rounded-md border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm shadow-sm transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_8px_20px_-8px_oklch(0.55_0.22_275/0.35)]',
+        'cursor-grab rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-[0_8px_20px_-8px_oklch(0.55_0.22_275/0.35)]',
         isDragging && 'opacity-50 shadow-lg ring-2 ring-[var(--color-primary)]/40',
       )}
     >
-      <div className="font-medium">{app.company || 'Untitled'}</div>
-      {app.role ? (
-        <div className="text-xs text-[var(--color-muted-foreground)]">{app.role}</div>
+      {/* Top row: monogram + company/role */}
+      <div className="mb-2 flex items-center gap-2">
+        <Monogram name={app.company || '?'} sm />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-[var(--color-foreground)]">
+            {app.company || 'Untitled'}
+          </div>
+          {app.role ? (
+            <div className="truncate text-xs text-[var(--color-muted-foreground)]">{app.role}</div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Meta: salary · location */}
+      {(app.salary || app.location) ? (
+        <div className="mb-2 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
+          {app.salary ? (
+            <span className="tabular-nums">{app.salary}</span>
+          ) : null}
+          {app.salary && app.location ? (
+            <span className="text-[var(--color-faint)]">·</span>
+          ) : null}
+          {app.location ? <span>{app.location}</span> : null}
+        </div>
       ) : null}
-      <a
-        href={app.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={e => e.stopPropagation()}
-        onPointerDown={e => e.stopPropagation()}
-        className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-      >
-        {hostnameOf(app.url)} <ExternalLink className="size-3" />
-      </a>
+
+      {/* Tags row (max 2) */}
+      {app.tags && app.tags.length > 0 ? (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {app.tags.slice(0, 2).map(tag => (
+            <span
+              key={tag}
+              className="rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Footer: host link + date */}
+      <div className="flex items-center justify-between gap-2">
+        <a
+          href={app.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+          className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+        >
+          <span className="truncate">{hostnameOf(app.url)}</span>
+          <ExternalLink className="size-3 shrink-0" />
+        </a>
+        <span className="shrink-0 tabular-nums text-xs text-[var(--color-faint)]">
+          {formatShortDate(app.createdAt)}
+        </span>
+      </div>
     </div>
   )
 }
@@ -59,7 +104,7 @@ function ColumnBody({ apps }: { apps: Application[] }) {
         <KanbanCard key={a.id} app={a} />
       ))}
       {apps.length === 0 ? (
-        <div className="rounded-md border border-dashed p-3 text-center text-xs text-[var(--color-muted-foreground)]">
+        <div className="kcol-empty rounded-lg border border-dashed border-[var(--color-border)] p-4 text-center text-xs text-[var(--color-faint)]">
           Drop here
         </div>
       ) : null}
@@ -78,8 +123,9 @@ function Column({ status, apps }: { status: Status; apps: Application[] }) {
         isOver && 'ring-2 ring-[var(--color-primary)]/50',
       )}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold">
+      {/* Column header */}
+      <div className="kcol-head mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
           <span className={cn('size-2 rounded-full', STATUS_DOT[status])} />
           <span>{STATUS_LABELS[status]}</span>
         </div>
@@ -158,7 +204,12 @@ export function Kanban({
 
   return (
     <div className="mx-auto max-w-[100rem] space-y-4 p-4 md:p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Kanban</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Kanban</h1>
+        <p className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">
+          Drag cards between stages to update their status.
+        </p>
+      </div>
       <Card>
         <CardContent className="p-3">
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
