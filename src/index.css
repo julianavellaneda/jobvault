@@ -2,64 +2,165 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Fonts are imported in src/main.tsx (Fontsource variable packages, self-hosted).
+   Registered family names: "Geist Variable" / "Geist Mono Variable". */
+@theme {
+  --font-sans: "Geist Variable", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", monospace;
+}
+
+/* ============================================================
+   LIGHT theme (:root) — derived from the dark mockup palette:
+   same hue family (280 blue-purple) + chroma, inverted lightness.
+   ============================================================ */
 :root {
-  --background: oklch(0.99 0.005 265);
-  --foreground: oklch(0.18 0.02 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 265);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 265);
-  --primary: oklch(0.55 0.22 275);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0.01 265);
-  --secondary-foreground: oklch(0.22 0.02 265);
-  --muted: oklch(0.96 0.01 265);
-  --muted-foreground: oklch(0.5 0.02 265);
-  --accent: oklch(0.95 0.02 275);
-  --accent-foreground: oklch(0.22 0.04 275);
-  --destructive: oklch(0.6 0.22 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.9 0.01 265);
-  --input: oklch(0.92 0.01 265);
-  --ring: oklch(0.62 0.22 275);
-  --radius: 0.625rem;
+  /* ---- Surfaces (layered, light) ---- */
+  --bg:        oklch(0.985 0.004 280);
+  --bg-grad-a: oklch(0.55 0.22 280 / 0.10);
+  --bg-grad-b: oklch(0.62 0.20 305 / 0.07);
+  --panel:     oklch(1 0 0);
+  --surface:   oklch(1 0 0);
+  --surface-2: oklch(0.97 0.006 280);
+  --surface-3: oklch(0.93 0.008 280);
 
-  --chart-1: oklch(0.62 0.22 275);
-  --chart-2: oklch(0.65 0.22 305);
-  --chart-3: oklch(0.72 0.15 220);
-  --chart-4: oklch(0.7 0.16 160);
-  --chart-5: oklch(0.75 0.16 70);
+  /* ---- Lines (dark-on-light) ---- */
+  --border:        oklch(0.20 0 0 / 0.10);
+  --border-soft:   oklch(0.20 0 0 / 0.06);
+  --border-strong: oklch(0.20 0 0 / 0.16);
+
+  /* ---- Text ---- */
+  --fg:    oklch(0.20 0.02 280);
+  --muted: oklch(0.45 0.02 280);
+  --faint: oklch(0.55 0.02 280);
+
+  /* ---- Brand (nudged down so it reads on white) ---- */
+  --primary:        oklch(0.55 0.20 280);
+  --primary-strong: oklch(0.50 0.20 280);
+  --primary-fg:     oklch(0.99 0.005 280);
+  --primary-soft:   oklch(0.55 0.20 280 / 0.12);
+  --primary-line:   oklch(0.55 0.20 280 / 0.30);
+  --accent2:        oklch(0.58 0.20 318);
+
+  /* ---- Status (same hues, lightness tuned to read on white) ---- */
+  --st-pending:   oklch(0.55 0.02 280);
+  --st-applied:   oklch(0.52 0.18 268);
+  --st-interview: oklch(0.54 0.21 305);
+  --st-offer:     oklch(0.55 0.15 162);
+  --st-rejected:  oklch(0.56 0.20 18);
+
+  /* ---- Shadows (light) ---- */
+  --shadow-sm:   0 1px 2px oklch(0.20 0.02 280 / 0.06);
+  --shadow:      0 12px 30px -12px oklch(0.20 0.02 280 / 0.16);
+  --shadow-glow: 0 16px 40px -16px oklch(0.55 0.22 280 / 0.30);
+
+  /* ============================================================
+     shadcn semantic tokens (re-pointed at the new palette).
+     These are the SOURCE vars that @theme inline maps to utilities.
+     ============================================================ */
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary-foreground: var(--primary-fg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--fg);
+  /* shadcn --muted is a BACKGROUND; --muted-foreground is TEXT. Don't swap. */
+  --muted-bg: var(--surface-2);
+  --muted-foreground: var(--muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--fg);
+  --destructive: oklch(0.56 0.20 18);
+  --destructive-foreground: oklch(0.99 0.005 280);
+  --input: var(--surface-2);
+  --ring: var(--primary);
+
+  /* Charts re-pointed to the new hue family (kept until Phase 9). */
+  --chart-1: var(--primary);
+  --chart-2: var(--accent2);
+  --chart-3: var(--st-applied);
+  --chart-4: var(--st-offer);
+  --chart-5: var(--st-rejected);
+
+  --radius: 14px;
 }
 
+/* ============================================================
+   DARK theme (.dark) — mockup :root values, VERBATIM.
+   ============================================================ */
 .dark {
-  --background: oklch(0.16 0.015 265);
-  --foreground: oklch(0.985 0.005 265);
-  --card: oklch(0.205 0.018 265);
-  --card-foreground: oklch(0.985 0.005 265);
-  --popover: oklch(0.21 0.02 265);
-  --popover-foreground: oklch(0.985 0.005 265);
-  --primary: oklch(0.65 0.22 275);
-  --primary-foreground: oklch(0.99 0.005 265);
-  --secondary: oklch(0.27 0.02 265);
-  --secondary-foreground: oklch(0.985 0.005 265);
-  --muted: oklch(0.27 0.02 265);
-  --muted-foreground: oklch(0.72 0.02 265);
-  --accent: oklch(0.3 0.04 275);
-  --accent-foreground: oklch(0.985 0.005 265);
-  --destructive: oklch(0.7 0.19 22);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.22 275);
+  /* ---- Surfaces (deep blue-purple charcoal, layered) ---- */
+  --bg:        oklch(0.15 0.018 280);
+  --bg-grad-a: oklch(0.55 0.22 280 / 0.16);
+  --bg-grad-b: oklch(0.62 0.20 305 / 0.10);
+  --panel:     oklch(0.185 0.020 280);
+  --surface:   oklch(0.205 0.022 280);
+  --surface-2: oklch(0.235 0.024 280);
+  --surface-3: oklch(0.275 0.026 280);
 
-  --chart-1: oklch(0.68 0.22 275);
-  --chart-2: oklch(0.7 0.22 305);
-  --chart-3: oklch(0.75 0.15 220);
-  --chart-4: oklch(0.74 0.16 160);
-  --chart-5: oklch(0.78 0.16 70);
+  /* ---- Lines ---- */
+  --border:        oklch(1 0 0 / 0.08);
+  --border-soft:   oklch(1 0 0 / 0.055);
+  --border-strong: oklch(1 0 0 / 0.16);
+
+  /* ---- Text ---- */
+  --fg:    oklch(0.97 0.006 280);
+  --muted: oklch(0.74 0.022 280);
+  --faint: oklch(0.58 0.022 280);
+
+  /* ---- Brand ---- */
+  --primary:        oklch(0.67 0.20 280);
+  --primary-strong: oklch(0.72 0.20 280);
+  --primary-fg:     oklch(0.99 0.005 280);
+  --primary-soft:   oklch(0.67 0.20 280 / 0.14);
+  --primary-line:   oklch(0.67 0.20 280 / 0.32);
+  --accent2:        oklch(0.70 0.20 318);
+
+  /* ---- Status ---- */
+  --st-pending:   oklch(0.74 0.02 280);
+  --st-applied:   oklch(0.64 0.17 268);
+  --st-interview: oklch(0.66 0.20 305);
+  --st-offer:     oklch(0.72 0.15 162);
+  --st-rejected:  oklch(0.66 0.19 18);
+
+  /* ---- Shadows ---- */
+  --shadow-sm:   0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow:      0 12px 30px -12px oklch(0 0 0 / 0.55);
+  --shadow-glow: 0 16px 40px -16px oklch(0.55 0.22 280 / 0.5);
+
+  /* ---- shadcn semantic tokens (dark) ---- */
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary-foreground: var(--primary-fg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--fg);
+  --muted-bg: var(--surface-2);
+  --muted-foreground: var(--muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--fg);
+  --destructive: oklch(0.66 0.19 18);
+  --destructive-foreground: oklch(0.99 0.005 280);
+  --input: var(--surface-2);
+  --ring: var(--primary);
+
+  --chart-1: var(--primary);
+  --chart-2: var(--accent2);
+  --chart-3: var(--st-applied);
+  --chart-4: var(--st-offer);
+  --chart-5: var(--st-rejected);
 }
 
+/* ============================================================
+   @theme inline — map source vars to Tailwind color utilities.
+   Existing shadcn names re-pointed (meaning preserved) + new tokens.
+   ============================================================ */
 @theme inline {
+  /* ---- shadcn semantic colors (unchanged names) ---- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -70,7 +171,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
+  /* shadcn `muted` = background; `muted-foreground` = text. */
+  --color-muted: var(--muted-bg);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
@@ -84,6 +186,30 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* ---- new raw surface / line / text tokens ---- */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-panel: var(--panel);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-faint: var(--faint);
+
+  /* ---- new brand tokens ---- */
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-line: var(--primary-line);
+  --color-accent2: var(--accent2);
+
+  /* ---- status tokens: enable bg-st-{x}, text-st-{x}, ring-st-{x}, border-st-{x} ---- */
+  --color-st-pending: var(--st-pending);
+  --color-st-applied: var(--st-applied);
+  --color-st-interview: var(--st-interview);
+  --color-st-offer: var(--st-offer);
+  --color-st-rejected: var(--st-rejected);
+
+  /* ---- radius derivations (keep shadcn rounded-sm/md/lg/xl working) ---- */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -94,23 +220,38 @@
   * {
     border-color: var(--color-border);
   }
-  body {
-    background: var(--color-background);
-    color: var(--color-foreground);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    margin: 0;
-    min-height: 100vh;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 20% -10%, oklch(0.55 0.22 275 / 0.18), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 0%, oklch(0.6 0.22 305 / 0.10), transparent 60%);
-    background-attachment: fixed;
-  }
   html {
     color-scheme: light dark;
   }
-  ::selection {
-    background: oklch(0.65 0.22 275 / 0.35);
+  body {
+    background: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    margin: 0;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 70% 48% at 18% -8%, var(--bg-grad-a), transparent 62%),
+      radial-gradient(ellipse 55% 40% at 92% -4%, var(--bg-grad-b), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: var(--primary-line);
+    color: var(--color-foreground);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+    background-clip: padding-box;
   }
 }
