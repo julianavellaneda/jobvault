@@ -32,7 +32,7 @@ function KanbanCard({ app }: { app: Application }) {
       {...attributes}
       {...listeners}
       className={cn(
-        'cursor-grab rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-[0_8px_20px_-8px_oklch(0.55_0.22_275/0.35)]',
+        'cursor-grab rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-[0_8px_20px_-8px_color-mix(in_oklch,var(--color-primary)_35%,transparent)]',
         isDragging && 'opacity-50 shadow-lg ring-2 ring-[var(--color-primary)]/40',
       )}
     >

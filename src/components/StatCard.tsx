@@ -56,7 +56,7 @@ export function StatCard({
   )
   if (!accent) return inner
   return (
-    <div className="rounded-xl bg-gradient-to-br from-[var(--color-primary)]/40 via-[var(--color-chart-2)]/20 to-transparent p-px shadow-[0_8px_30px_-10px_oklch(0.55_0.22_275/0.45)]">
+    <div className="rounded-xl bg-gradient-to-br from-[var(--color-primary)]/40 via-[var(--color-chart-2)]/20 to-transparent p-px shadow-[0_8px_30px_-10px_color-mix(in_oklch,var(--color-primary)_45%,transparent)]">
       {inner}
     </div>
   )

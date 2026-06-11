@@ -19,10 +19,6 @@ function appliedDate(a: Application): Date | null {
   return a.appliedAt != null ? new Date(a.appliedAt) : null
 }
 
-function createdDate(a: Application): Date | null {
-  return a.createdAt != null ? new Date(a.createdAt) : null
-}
-
 export function computeStreak(apps: Application[]): number {
   const days = new Set<string>()
   for (const a of apps) {
@@ -92,16 +88,6 @@ export function funnelCounts(apps: Application[]): { stage: string; count: numbe
   ]
 }
 
-export function weekdayHeatmap(apps: Application[]): { day: string; count: number }[] {
-  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const counts = [0, 0, 0, 0, 0, 0, 0]
-  for (const a of apps) {
-    const d = appliedDate(a)
-    if (d) counts[d.getDay()] += 1
-  }
-  return labels.map((day, i) => ({ day, count: counts[i] }))
-}
-
 export function bySource(apps: Application[]): { source: string; total: number; applied: number }[] {
   const map = new Map<string, { total: number; applied: number }>()
   for (const a of apps) {
@@ -128,29 +114,6 @@ export function byUser(apps: Application[]): { name: string; added: number; appl
   return Array.from(map.entries())
     .map(([name, v]) => ({ name, ...v }))
     .sort((a, b) => b.added - a.added)
-}
-
-export function backlogBurndown(apps: Application[], days = 30): { date: string; backlog: number }[] {
-  const end = new Date()
-  end.setHours(23, 59, 59, 999)
-  const points: { date: string; backlog: number }[] = []
-  for (let i = days - 1; i >= 0; i--) {
-    const cursor = new Date(end)
-    cursor.setDate(end.getDate() - i)
-    let pendingAtCursor = 0
-    for (const a of apps) {
-      const created = createdDate(a)
-      if (!created || created > cursor) continue
-      const applied = appliedDate(a)
-      if (a.status === 'pending') {
-        pendingAtCursor += 1
-      } else if (applied && applied > cursor) {
-        pendingAtCursor += 1
-      }
-    }
-    points.push({ date: dayKey(cursor).slice(5), backlog: pendingAtCursor })
-  }
-  return points
 }
 
 export function rangeFilter(apps: Application[], range: DashRange): Application[] {
