@@ -77,7 +77,7 @@ function AppShell({
       ) : view === 'kanban' ? (
         <Kanban apps={appsApi.apps} updateApp={appsApi.update} />
       ) : view === 'settings' ? (
-        <Settings />
+        <Settings dark={dark} onToggleDark={onToggleDark} />
       ) : view === 'pending' ? (
         <Pending
           pending={pendingApi.pending}

@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { LogIn, Loader2 } from 'lucide-react'
 import { apiFetch, ApiError } from '@/storage/rest/client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 export function Login({ onSignedIn }: { onSignedIn: () => void }) {
@@ -36,16 +35,21 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <div className="flex min-h-svh items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardContent className="p-8">
-          <div className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-[var(--color-accent)]">
+      <div className="w-full max-w-md">
+        {/* Brand mark */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
             <LogIn className="size-6" />
           </div>
-          <h1 className="text-center text-2xl font-semibold tracking-tight">Jobvault</h1>
-          <p className="mt-2 text-center text-sm text-[var(--color-muted-foreground)]">
-            Sign in to continue.
-          </p>
-          <form onSubmit={submit} className="mt-6 space-y-3">
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Jobvault</h1>
+            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Sign in to continue.</p>
+          </div>
+        </div>
+
+        {/* Glass card */}
+        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow)]">
+          <form onSubmit={submit} className="space-y-3">
             <Input
               type="text"
               autoComplete="username"
@@ -72,8 +76,8 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
               <p className="text-center text-sm text-[var(--color-destructive)]">{error}</p>
             ) : null}
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
