@@ -6,6 +6,46 @@ All notable changes to this project are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-17
+
+A ground-up visual overhaul. Jobvault gets a cohesive design-token system,
+Geist typography, a light/dark theme toggle, hand-rolled SVG charts, and a new
+way to add applications by hand — no URL required.
+
+### Added
+- **Manual application entry.** An **Add application** dialog on the
+  Applications page creates an entry by hand — company, role, URL, salary,
+  location, work arrangement, source, status, tags, deadline, and notes.
+  The URL is now optional: `newApplicationSchema` accepts an empty string via
+  the new `optionalHttpUrlSchema`, while the AI-extract and pending-approve
+  paths still require a real `http(s)` URL. Form parsing/validation is pure
+  and tested in `src/lib/newApplication.ts`.
+- **Appearance toggle.** Settings now has an Appearance card with a light/dark
+  theme segmented control. The choice persists to `localStorage` and follows
+  the system preference on first run.
+- **Design-token layer + Geist fonts.** A full set of color / radius / shadow
+  CSS variables in `src/index.css` drives every surface, and the UI ships the
+  Geist and Geist Mono variable fonts. Status colors are centralized in
+  `src/lib/statusColors.ts`.
+- **Shared UI primitives** — `Chip`, `Monogram`, `SegmentedControl`, and
+  `StatusPill` under `src/components/ui/`, restyled to the new token system.
+- **Dashboard date-range filter.** Stats (streak, funnel, heatmap, breakdowns)
+  recompute for the selected window; range logic is pure and tested in
+  `src/lib/stats.ts`.
+
+### Changed
+- **Reskinned every page and primitive** — Nav/topbar, Dashboard, Applications
+  + rows, Kanban columns + cards, Pending, AddLinks, Settings, and
+  Login/Setup — to the new glassmorphic, tokenized design language.
+- **Charts are now bespoke inline SVG** (funnel, weekday heatmap, trends),
+  pulling color from `--color-chart-1..5` instead of a charting library.
+- Renamed the local extraction badge `StatusPill` → `ExtractionBadge` to free
+  up the name for the shared status primitive.
+
+### Removed
+- **`recharts` dependency.** All charts are hand-rolled SVG now, trimming the
+  client bundle.
+
 ## [0.4.3] - 2026-05-26
 
 macOS bundles are now signed with a Developer ID Application certificate
@@ -173,7 +213,8 @@ Initial OSS release.
   CI, and OSS scaffolding (AGPL-3.0 license, CONTRIBUTING, CODE_OF_CONDUCT,
   SECURITY policy, issue/PR templates).
 
-[Unreleased]: https://github.com/julianavellaneda/jobvault/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/julianavellaneda/jobvault/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/julianavellaneda/jobvault/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/julianavellaneda/jobvault/compare/v0.4.0...v0.4.3
 [0.4.0]: https://github.com/julianavellaneda/jobvault/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/julianavellaneda/jobvault/compare/v0.3.0...v0.3.1

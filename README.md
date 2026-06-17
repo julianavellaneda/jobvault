@@ -114,8 +114,10 @@ Vite proxies `/api/*` to the Bun server, so you can use either port during dev.
 - **AI extraction (BYO key)** — `/api/extract` pulls company / role / salary / location from a posting. Pluggable providers: **OpenAI, Anthropic, Google, MiniMax, OpenRouter, or any OpenAI-compatible endpoint** (Ollama / LM Studio / vLLM). Configure via env or the in-app **Settings** page; keys never leave your DB. See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
 - **Kanban** with drag-and-drop status changes; status flip to *applied* auto-stamps `appliedAt`.
 - **Applications grid** with search, chip filters, group-by (status / source / month-added), sort-by (date added / applied / deadline / company). Two-tier rows: compact-by-default, click to expand for inline edits.
+- **Add applications by hand** — an **Add application** dialog for entries that don't start from a URL (recruiter intros, referrals, networking). URL is optional; everything else is the same editable schema.
 - **Pending queue** to triage before promoting to a tracked application.
-- **Dashboard** — streak, applied-today, funnel, weekday heatmap, source / contributor breakdowns. All computed client-side from a single source of truth.
+- **Dashboard** — streak, applied-today, funnel, weekday heatmap, source / contributor breakdowns, with a date-range filter. Bespoke inline-SVG charts (no charting library); all stats computed client-side from a single source of truth.
+- **Light / dark theme** — toggle under **Settings → Appearance**; follows your system preference on first run.
 - **Self-host first** — username/password auth backed by local SQLite, set up in-app on first run or via `ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars for headless deploys. Sessions are sealed cookies (iron-session); passwords are scrypt-hashed.
 
 ## Documentation

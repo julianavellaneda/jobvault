@@ -13,7 +13,7 @@ A polished, self-hostable, human-in-the-loop application tracker. Single-process
 - shadcn-style UI primitives in `src/components/ui/` (Radix + cva). Add new primitives by hand; `bunx shadcn` fights the TS6 setup.
 - **Hono** on Bun for the API (`server/`). `hono/cookie` + iron-session's `sealData`/`unsealData` for sealed-cookie sessions.
 - **Drizzle ORM** + `bun:sqlite` (built into the Bun runtime). Local SQLite file at `file:./data/app.db` by default; `:memory:` is supported for tests.
-- `recharts`, `@dnd-kit/core`, `sonner`, `date-fns`, `lucide-react`
+- `@dnd-kit/core`, `sonner`, `date-fns`, `lucide-react`, Geist / Geist Mono fonts (`@fontsource-variable/*`). Charts are bespoke inline SVG in `src/components/charts.tsx` — no charting lib (`recharts` was dropped in 0.5.0).
 - Path alias: `@/*` → `src/*` (Vite + Vitest)
 
 ## Architecture
@@ -121,4 +121,5 @@ All three must pass with no errors.
 - **Phase 2** (REST surface): Vercel-shape API routes + Google OAuth + iron-session + env/SQL allowlist.
 - **Phase 3** (frontend cutover): UI switched to REST polling + optimistic writes; Firebase kept alive only for the migration script.
 - **Phase 4** (OSS migration): Firestore data exported to local SQLite; Vercel + Firebase code deleted; Hono-on-Bun server replaces `api/`; LICENSE/README/docs/Docker/CI shipped. Repo is OSS-ready.
-- **Phase 5** (multi-provider AI, current): `AI_PROVIDERS` registry + `resolveAiConfig` (env-wins/DB-fallback); `ai_settings` table (migration `0001`); `/api/settings/ai` routes; in-app **Settings** page with provider/model/key + Test connection. OpenAI/Anthropic/Google/OpenRouter/OpenAI-compatible added alongside MiniMax; legacy `MINIMAX_API_KEY` still works.
+- **Phase 5** (multi-provider AI): `AI_PROVIDERS` registry + `resolveAiConfig` (env-wins/DB-fallback); `ai_settings` table (migration `0001`); `/api/settings/ai` routes; in-app **Settings** page with provider/model/key + Test connection. OpenAI/Anthropic/Google/OpenRouter/OpenAI-compatible added alongside MiniMax; legacy `MINIMAX_API_KEY` still works.
+- **Phase 6** (UI overhaul, v0.5.0, current): ground-up reskin onto a design-token system (`src/index.css`) + Geist fonts + light/dark theme toggle (Settings → Appearance). `recharts` dropped for bespoke inline-SVG charts. New shared primitives (`Chip`, `Monogram`, `SegmentedControl`, `StatusPill`). Manual **Add application** dialog with an optional URL (`optionalHttpUrlSchema`); pure form logic in `src/lib/newApplication.ts`. Dashboard gains a date-range filter.
