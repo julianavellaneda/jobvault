@@ -1,4 +1,4 @@
-import { Columns3, LayoutDashboard, List, LogOut, Moon, Plus, Settings, Sun, Target, Inbox } from 'lucide-react'
+import { Columns3, LayoutDashboard, List, LogOut, Moon, Plus, Settings, Sun, Inbox } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { AuthUser } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -39,9 +39,7 @@ export function Nav({
       <div className="mx-auto flex h-[62px] max-w-[1500px] items-center gap-[22px] px-[26px]">
         {/* Brand */}
         <div className="flex shrink-0 items-center gap-[11px]">
-          <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-[linear-gradient(150deg,var(--color-primary-strong),var(--color-accent2))] text-white shadow-[0_4px_14px_-4px_var(--color-primary),inset_0_1px_0_oklch(1_0_0/0.25)]">
-            <Target className="size-[18px]" />
-          </span>
+          <img src="/logo.svg" alt="Jobvault" className="h-8 w-8" />
           <span className="text-base font-semibold tracking-[-0.02em]">
             Jobvault
           </span>

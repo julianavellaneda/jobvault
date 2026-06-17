@@ -71,6 +71,7 @@ function AppShell({
         <Applications
           apps={appsApi.apps}
           loading={appsApi.loading}
+          createApp={appsApi.create}
           updateApp={appsApi.update}
           removeApp={appsApi.remove}
         />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronRight, Inbox, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, Inbox, Plus, Search } from 'lucide-react'
+import type { NewApplication } from '@/storage/adapter'
 import type { Application, Status } from '@/types'
 import { STATUSES, STATUS_LABELS } from '@/types'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApplicationRow, ROW_GRID } from '@/components/ApplicationRow'
+import { AddApplicationDialog } from '@/components/AddApplicationDialog'
 import {
   defaultSortDir,
   groupApps,
@@ -35,11 +37,13 @@ const LS_SORT_DIR = 'applications.sortDir'
 export function Applications({
   apps,
   loading,
+  createApp,
   updateApp,
   removeApp,
 }: {
   apps: Application[]
   loading: boolean
+  createApp: (input: NewApplication) => Promise<Application | null>
   updateApp: (id: string, patch: Partial<Application>) => Promise<void>
   removeApp: (id: string) => Promise<void>
 }) {
@@ -140,6 +144,12 @@ export function Applications({
           <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-sm tabular-nums text-[var(--color-muted-foreground)]">
             {filtered.length}/{apps.length}
           </span>
+          <AddApplicationDialog createApp={createApp}>
+            <Button size="sm" className="ml-auto">
+              <Plus className="size-4" />
+              Add manually
+            </Button>
+          </AddApplicationDialog>
         </div>
 
         {/* Toolbar */}

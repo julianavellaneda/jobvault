@@ -17,6 +17,23 @@ export const httpUrlSchema = z.string().superRefine((val, ctx) => {
   }
 })
 
+// Manual-add entries may have no URL at all. Empty string is allowed; a
+// non-empty value must still be a valid http(s) URL. The AI/approve paths
+// always supply a real URL, so they keep passing through httpUrlSchema above.
+export const optionalHttpUrlSchema = z.string().superRefine((val, ctx) => {
+  if (val.length === 0) return
+  let u: URL
+  try {
+    u = new URL(val)
+  } catch {
+    ctx.addIssue({ code: 'custom', message: 'invalid_url' })
+    return
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+    ctx.addIssue({ code: 'custom', message: 'invalid_url_scheme' })
+  }
+})
+
 export function hostnameOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '')
@@ -35,7 +52,7 @@ export const extractedFieldsSchema = z.object({
 })
 
 export const newApplicationSchema = z.object({
-  url: httpUrlSchema,
+  url: optionalHttpUrlSchema.default(''),
   company: z.string().default(''),
   role: z.string().default(''),
   salary: z.string().default(''),
