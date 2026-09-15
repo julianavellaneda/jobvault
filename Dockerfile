@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.14 AS builder
+FROM oven/bun:1.4.2 AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 # --ignore-scripts: better-sqlite3 is a Node/Vitest-only devDependency whose
@@ -10,7 +10,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 COPY . .
 RUN bun run build
 
-FROM oven/bun:1.3.14 AS runtime
+FROM oven/bun:1.4.2 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 # Containers must listen on all interfaces for port publishing to work; the
