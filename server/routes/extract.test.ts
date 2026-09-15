@@ -75,6 +75,25 @@ describe('fetchPage', () => {
     expect(observedIp).toBe(PUBLIC_IP)
   })
 
+  it('does not echo connection errors (no port-scan oracle)', async () => {
+    const dial = vi.fn<PinnedFetch>(async () => {
+      throw new Error('connect ECONNREFUSED 93.184.216.34:6379 — redis banner')
+    })
+
+    const result = await fetchPage(PUBLIC_URL, { resolver: publicResolver, dial })
+
+    expect(result).toEqual({ ok: false, error: 'fetch_failed' })
+  })
+
+  it('rejects IPv4-mapped IPv6 literals before dialling', async () => {
+    const dial = vi.fn<PinnedFetch>()
+
+    const result = await fetchPage('http://[::ffff:a9fe:a9fe]/latest/meta-data/', { dial })
+
+    expect(result).toEqual({ ok: false, error: 'private_address' })
+    expect(dial).not.toHaveBeenCalled()
+  })
+
   it('rejects rebinding to a private IP on a redirect hop', async () => {
     const rebindingResolver: Resolver = vi.fn(async (host: string) => {
       if (host === ATTACKER_HOST) return [{ address: PUBLIC_IP, family: 4 }]

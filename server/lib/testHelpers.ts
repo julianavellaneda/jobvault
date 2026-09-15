@@ -4,7 +4,9 @@ import type {
   NewApplication,
   NewLocalUser,
   NewPendingUrl,
+  NewSession,
   StoredLocalUser,
+  StoredSession,
 } from '@/storage/adapter'
 
 let nextId = 1
@@ -17,6 +19,7 @@ export function memoryAdapter(initial: { users?: StoredLocalUser[] } = {}): Data
   const apps: Application[] = []
   const pendings: PendingUrl[] = []
   const users: StoredLocalUser[] = (initial.users ?? []).slice()
+  let sessions: StoredSession[] = []
   let aiSettings: AiSettingsRow | null = null
 
   return {
@@ -103,6 +106,20 @@ export function memoryAdapter(initial: { users?: StoredLocalUser[] } = {}): Data
       }
       users.push(user)
       return user
+    },
+    async createSession(input: NewSession) {
+      const session: StoredSession = { ...input, id: id(), createdAt: Date.now() }
+      sessions.push(session)
+      return session
+    },
+    async findSession(sessionId) {
+      return sessions.find(s => s.id === sessionId) ?? null
+    },
+    async deleteSession(sessionId) {
+      sessions = sessions.filter(s => s.id !== sessionId)
+    },
+    async deleteExpiredSessions(now) {
+      sessions = sessions.filter(s => s.expiresAt > now)
     },
     async getAiSettings() {
       return aiSettings ? { ...aiSettings } : null

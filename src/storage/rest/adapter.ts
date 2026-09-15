@@ -4,6 +4,7 @@ import type {
   NewApplication,
   NewPendingUrl,
   StoredLocalUser,
+  StoredSession,
 } from '../adapter'
 import { apiFetch } from './client'
 
@@ -84,6 +85,23 @@ export class RestDataAdapter implements DataAdapter {
 
   async createInitialUser(): Promise<StoredLocalUser> {
     throw new Error('createInitialUser is server-only')
+  }
+
+  // Sessions live behind the sealed cookie (server/lib/session.ts).
+  async createSession(): Promise<StoredSession> {
+    throw new Error('createSession is server-only')
+  }
+
+  async findSession(): Promise<StoredSession | null> {
+    throw new Error('findSession is server-only')
+  }
+
+  async deleteSession(): Promise<void> {
+    throw new Error('deleteSession is server-only')
+  }
+
+  async deleteExpiredSessions(): Promise<void> {
+    throw new Error('deleteExpiredSessions is server-only')
   }
 
   // AI settings flow through the dedicated /api/settings/* endpoints

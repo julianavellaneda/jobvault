@@ -29,6 +29,13 @@
       "when": 1779500000000,
       "tag": "0003_rename_email_to_username",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789249807055,
+      "tag": "0004_server_sessions",
+      "breakpoints": true
     }
   ]
 }

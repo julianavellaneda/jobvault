@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
 import { memoryAdapter } from '../lib/testHelpers'
 import { _resetRateLimitForTests } from '../lib/rateLimit'
+import { _resetSetupTokenForTests } from '../lib/setupToken'
 import type { DataAdapter } from '@/storage/adapter'
 
 let adapter: DataAdapter
@@ -29,10 +30,19 @@ function buildApp() {
   return app
 }
 
-async function json(app: Hono, url: string, method: string, body?: unknown) {
+async function json(
+  app: Hono,
+  url: string,
+  method: string,
+  body?: unknown,
+  extraHeaders: Record<string, string> = {},
+) {
   return app.request(url, {
     method,
-    headers: body !== undefined ? { 'content-type': 'application/json' } : {},
+    headers: {
+      ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+      ...extraHeaders,
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 }
@@ -47,7 +57,11 @@ describe('GET /api/auth/me', () => {
   it('returns needs-setup when no users exist', async () => {
     const r = await buildApp().request('/api/auth/me')
     expect(r.status).toBe(200)
-    expect(await r.json()).toEqual({ status: 'needs-setup', minPasswordLength: 1 })
+    expect(await r.json()).toEqual({
+      status: 'needs-setup',
+      minPasswordLength: 1,
+      setupTokenRequired: false,
+    })
   })
 
   it('returns signed-out when users exist but no session', async () => {
@@ -80,7 +94,71 @@ describe('GET /api/auth/me', () => {
     session = { userId: 'ghost' }
     const r = await buildApp().request('/api/auth/me')
     expect(r.status).toBe(200)
-    expect(await r.json()).toEqual({ status: 'needs-setup', minPasswordLength: 1 })
+    expect(await r.json()).toEqual({
+      status: 'needs-setup',
+      minPasswordLength: 1,
+      setupTokenRequired: false,
+    })
+  })
+})
+
+describe('setup token on a network-reachable server', () => {
+  const TOKEN = 'operator-only-setup-token'
+
+  beforeEach(() => {
+    process.env.HOST = '0.0.0.0'
+    process.env.SETUP_TOKEN = TOKEN
+    _resetSetupTokenForTests()
+  })
+
+  afterEach(() => {
+    delete process.env.HOST
+    delete process.env.SETUP_TOKEN
+    _resetSetupTokenForTests()
+  })
+
+  it('advertises that a token is required', async () => {
+    const r = await buildApp().request('/api/auth/me')
+    expect(await r.json()).toMatchObject({ status: 'needs-setup', setupTokenRequired: true })
+  })
+
+  it('rejects setup without a token', async () => {
+    const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+      username: 'alex',
+      password: 'correct-horse-battery-staple',
+    })
+    expect(r.status).toBe(401)
+    expect(await r.json()).toEqual({ error: 'invalid_setup_token' })
+    expect(await adapter.countUsers()).toBe(0)
+  })
+
+  it('rejects setup with the wrong token', async () => {
+    const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+      username: 'alex',
+      password: 'correct-horse-battery-staple',
+      setupToken: 'operator-only-setup-tokeX',
+    })
+    expect(r.status).toBe(401)
+    expect(await adapter.countUsers()).toBe(0)
+  })
+
+  it('creates the admin with the right token', async () => {
+    const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+      username: 'alex',
+      password: 'correct-horse-battery-staple',
+      setupToken: TOKEN,
+    })
+    expect(r.status).toBe(200)
+    expect(await adapter.countUsers()).toBe(1)
+  })
+
+  it('does not require a token when bound to loopback', async () => {
+    process.env.HOST = '127.0.0.1'
+    const r = await json(buildApp(), '/api/auth/setup', 'POST', {
+      username: 'alex',
+      password: 'correct-horse-battery-staple',
+    })
+    expect(r.status).toBe(200)
   })
 })
 
@@ -218,6 +296,110 @@ describe('POST /api/auth/login', () => {
       password: 'correct-horse-battery-staple',
     })
     expect(r.status).toBe(429)
+  })
+
+  it('does not count successful logins against the limit', async () => {
+    const app = buildApp()
+    for (let i = 0; i < 8; i++) {
+      const r = await json(app, '/api/auth/login', 'POST', {
+        username: 'alex',
+        password: 'correct-horse-battery-staple',
+      })
+      expect(r.status).toBe(200)
+    }
+  })
+
+  it('ignores a spoofed X-Forwarded-For unless TRUST_PROXY is set', async () => {
+    const app = buildApp()
+    for (let i = 0; i < 5; i++) {
+      await json(
+        app,
+        '/api/auth/login',
+        'POST',
+        { username: 'alex', password: 'wrong-but-long-enough' },
+        { 'x-forwarded-for': `203.0.113.${i}` },
+      )
+    }
+    const r = await json(
+      app,
+      '/api/auth/login',
+      'POST',
+      { username: 'alex', password: 'wrong-but-long-enough' },
+      { 'x-forwarded-for': '203.0.113.99' },
+    )
+    expect(r.status).toBe(429)
+  })
+
+  describe('behind a trusted proxy', () => {
+    beforeEach(() => {
+      process.env.TRUST_PROXY = 'true'
+    })
+    afterEach(() => {
+      delete process.env.TRUST_PROXY
+    })
+
+    it('keys on the rightmost hop, so a client-set leftmost hop does not reset the limit', async () => {
+      const app = buildApp()
+      for (let i = 0; i < 5; i++) {
+        await json(
+          app,
+          '/api/auth/login',
+          'POST',
+          { username: 'alex', password: 'wrong-but-long-enough' },
+          { 'x-forwarded-for': `10.9.9.${i}, 198.51.100.7` },
+        )
+      }
+      const r = await json(
+        app,
+        '/api/auth/login',
+        'POST',
+        { username: 'alex', password: 'correct-horse-battery-staple' },
+        { 'x-forwarded-for': '10.9.9.200, 198.51.100.7' },
+      )
+      expect(r.status).toBe(429)
+    })
+
+    it('does not lock out a different client IP', async () => {
+      const app = buildApp()
+      for (let i = 0; i < 5; i++) {
+        await json(
+          app,
+          '/api/auth/login',
+          'POST',
+          { username: 'alex', password: 'wrong-but-long-enough' },
+          { 'x-forwarded-for': '198.51.100.7' },
+        )
+      }
+      const r = await json(
+        app,
+        '/api/auth/login',
+        'POST',
+        { username: 'alex', password: 'correct-horse-battery-staple' },
+        { 'x-forwarded-for': '198.51.100.8' },
+      )
+      expect(r.status).toBe(200)
+    })
+
+    it('caps failures per username across many IPs', async () => {
+      const app = buildApp()
+      for (let i = 0; i < 20; i++) {
+        await json(
+          app,
+          '/api/auth/login',
+          'POST',
+          { username: 'alex', password: 'wrong-but-long-enough' },
+          { 'x-forwarded-for': `198.51.100.${i}` },
+        )
+      }
+      const r = await json(
+        app,
+        '/api/auth/login',
+        'POST',
+        { username: 'ALEX', password: 'wrong-but-long-enough' },
+        { 'x-forwarded-for': '198.51.100.250' },
+      )
+      expect(r.status).toBe(429)
+    })
   })
 })
 

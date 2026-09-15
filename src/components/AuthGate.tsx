@@ -13,7 +13,13 @@ export function AuthGate({ auth, children }: { auth: AuthState; children: ReactN
   }
 
   if (auth.status === 'needs-setup') {
-    return <Setup onComplete={auth.refresh} minPasswordLength={auth.minPasswordLength} />
+    return (
+      <Setup
+        onComplete={auth.refresh}
+        minPasswordLength={auth.minPasswordLength}
+        setupTokenRequired={auth.setupTokenRequired}
+      />
+    )
   }
 
   if (auth.status === 'signed-out') {

@@ -13,6 +13,13 @@ export async function parseBody<T>(
     return { ok: false, response: c.json({ error: 'body_too_large' }, 413) }
   }
 
+  // JSON only. Besides being the API's contract, this closes the classic CSRF
+  // path of a cross-site <form enctype="text/plain"> smuggling a JSON body —
+  // a browser can't send application/json cross-origin without a preflight.
+  if (c.req.raw.body && !/^application\/json\b/i.test(c.req.header('content-type') ?? '')) {
+    return { ok: false, response: c.json({ error: 'unsupported_media_type' }, 415) }
+  }
+
   let raw: unknown
   try {
     const body = c.req.raw.body

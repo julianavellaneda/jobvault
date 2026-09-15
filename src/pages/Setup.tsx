@@ -11,9 +11,11 @@ type Step = 'account' | 'ai'
 export function Setup({
   onComplete,
   minPasswordLength = 1,
+  setupTokenRequired = false,
 }: {
   onComplete: () => void
   minPasswordLength?: number
+  setupTokenRequired?: boolean
 }) {
   const [step, setStep] = useState<Step>('account')
   return (
@@ -21,7 +23,11 @@ export function Setup({
       <div className="w-full max-w-lg space-y-4">
         <Steps current={step} />
         {step === 'account' ? (
-          <AccountStep onDone={() => setStep('ai')} minPasswordLength={minPasswordLength} />
+          <AccountStep
+            onDone={() => setStep('ai')}
+            minPasswordLength={minPasswordLength}
+            setupTokenRequired={setupTokenRequired}
+          />
         ) : (
           <AiStep onDone={onComplete} />
         )}
@@ -47,10 +53,13 @@ function Steps({ current }: { current: Step }) {
 function AccountStep({
   onDone,
   minPasswordLength,
+  setupTokenRequired,
 }: {
   onDone: () => void
   minPasswordLength: number
+  setupTokenRequired: boolean
 }) {
+  const [setupToken, setSetupToken] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -58,6 +67,7 @@ function AccountStep({
   const [error, setError] = useState<string | null>(null)
 
   function validate(): string | null {
+    if (setupTokenRequired && !setupToken.trim()) return 'Enter the setup token from the server logs.'
     const u = username.trim()
     if (u.length < 3 || u.length > 32) return 'Username must be 3-32 characters.'
     if (!/^[a-zA-Z0-9._-]+$/.test(u))
@@ -81,12 +91,18 @@ function AccountStep({
     try {
       await apiFetch('/api/auth/setup', {
         method: 'POST',
-        body: { username: username.trim(), password },
+        body: {
+          username: username.trim(),
+          password,
+          ...(setupTokenRequired ? { setupToken: setupToken.trim() } : {}),
+        },
       })
       onDone()
     } catch (err) {
       if (err instanceof ApiError && err.status === 410) {
         setError('Setup is already complete on this server. Reload to sign in.')
+      } else if (err instanceof ApiError && err.status === 401) {
+        setError('That setup token is not valid. Copy it again from the server logs.')
       } else {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -108,6 +124,25 @@ function AccountStep({
       </div>
       <div className="p-6">
         <form onSubmit={submit} className="space-y-3">
+          {setupTokenRequired ? (
+            <div className="space-y-1.5">
+              <Input
+                type="text"
+                placeholder="Setup token"
+                value={setupToken}
+                onChange={e => setSetupToken(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                required
+                disabled={busy}
+                className="font-mono"
+              />
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                This server is reachable over the network, so setup needs the one-time token
+                printed in its logs (e.g. <code className="font-mono">docker compose logs app</code>).
+              </p>
+            </div>
+          ) : null}
           <Input
             type="text"
             placeholder="Username"

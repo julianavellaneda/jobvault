@@ -21,6 +21,7 @@ const MIGRATIONS = [
   resolve(__dirname, 'migrations/0001_acoustic_corsair.sql'),
   resolve(__dirname, 'migrations/0002_local_auth.sql'),
   resolve(__dirname, 'migrations/0003_rename_email_to_username.sql'),
+  resolve(__dirname, 'migrations/0004_server_sessions.sql'),
 ]
 
 async function applyMigrations(client: Database.Database) {
@@ -243,6 +244,43 @@ describe('SqliteDataAdapter', () => {
         adapter.createInitialUser(newUser({ username: 'second' })),
       ).rejects.toThrow(/setup_already_complete/)
       expect(await adapter.countUsers()).toBe(1)
+    })
+  })
+
+  describe('session persistence', () => {
+    it('createSession round-trips and deleteSession revokes', async () => {
+      const u = await adapter.createUser(newUser())
+      const s = await adapter.createSession({ userId: u.id, expiresAt: Date.now() + 60_000 })
+      expect(s.id).toMatch(/^[0-9a-f-]{36}$/)
+      expect(await adapter.findSession(s.id)).toEqual(s)
+
+      await adapter.deleteSession(s.id)
+      expect(await adapter.findSession(s.id)).toBeNull()
+    })
+
+    it('deleteExpiredSessions removes only expired rows', async () => {
+      const u = await adapter.createUser(newUser())
+      const now = Date.now()
+      const expired = await adapter.createSession({ userId: u.id, expiresAt: now - 1 })
+      const live = await adapter.createSession({ userId: u.id, expiresAt: now + 60_000 })
+
+      await adapter.deleteExpiredSessions(now)
+      expect(await adapter.findSession(expired.id)).toBeNull()
+      expect(await adapter.findSession(live.id)).not.toBeNull()
+    })
+
+    it('deleting a user cascades to their sessions (password-recovery path)', async () => {
+      const u = await adapter.createUser(newUser())
+      const s = await adapter.createSession({ userId: u.id, expiresAt: Date.now() + 60_000 })
+
+      client.exec('DELETE FROM users')
+      expect(await adapter.findSession(s.id)).toBeNull()
+    })
+
+    it('rejects a session for a user that does not exist', async () => {
+      await expect(
+        adapter.createSession({ userId: 'ghost', expiresAt: Date.now() + 60_000 }),
+      ).rejects.toThrow()
     })
   })
 

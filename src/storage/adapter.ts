@@ -13,6 +13,15 @@ export interface StoredLocalUser {
 
 export type NewLocalUser = Omit<StoredLocalUser, 'id' | 'createdAt'>
 
+export interface StoredSession {
+  id: string
+  userId: string
+  createdAt: number
+  expiresAt: number
+}
+
+export type NewSession = Pick<StoredSession, 'userId' | 'expiresAt'>
+
 export interface DataAdapter {
   listApplications(): Promise<Application[]>
   getApplication(id: string): Promise<Application | null>
@@ -37,6 +46,11 @@ export interface DataAdapter {
    * if any user already exists.
    */
   createInitialUser(input: NewLocalUser): Promise<StoredLocalUser>
+
+  createSession(input: NewSession): Promise<StoredSession>
+  findSession(id: string): Promise<StoredSession | null>
+  deleteSession(id: string): Promise<void>
+  deleteExpiredSessions(now: number): Promise<void>
 
   getAiSettings(): Promise<AiSettingsRow | null>
   setAiSettings(patch: Partial<Omit<AiSettingsRow, 'updatedAt'>>): Promise<void>

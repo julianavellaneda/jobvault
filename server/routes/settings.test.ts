@@ -40,6 +40,22 @@ vi.mock('ai', () => ({
   generateText: (args: unknown) => genText(args),
 }))
 
+// Capture what each provider factory is handed, so tests can assert which key
+// and base URL would actually go over the wire.
+let factoryArgs: Record<string, unknown> | null = null
+vi.mock('@ai-sdk/openai-compatible', () => ({
+  createOpenAICompatible: (opts: Record<string, unknown>) => {
+    factoryArgs = opts
+    return () => ({})
+  },
+}))
+vi.mock('vercel-minimax-ai-provider', () => ({
+  createMinimax: (opts: Record<string, unknown>) => {
+    factoryArgs = opts
+    return () => ({})
+  },
+}))
+
 const settingsRoute = (await import('./settings')).default
 
 function buildApp() {
@@ -59,12 +75,94 @@ async function jsonReq(app: Hono, url: string, method: string, body?: unknown) {
 beforeEach(() => {
   adapter = memoryAdapter()
   genText = async () => ({ text: 'OK' })
+  factoryArgs = null
   _resetRateLimitForTests()
   delete process.env.AI_PROVIDER
   delete process.env.AI_MODEL
   delete process.env.AI_BASE_URL
   delete process.env.OPENAI_API_KEY
   delete process.env.MINIMAX_API_KEY
+  delete process.env.MINIMAX_BASE_URL
+})
+
+describe('stored AI keys stay bound to their endpoint', () => {
+  const LOCAL = 'http://127.0.0.1:11434/v1'
+
+  beforeEach(async () => {
+    await adapter.setAiSettings({
+      provider: 'openai-compatible',
+      apiKey: 'sk-stored-secret',
+      baseUrl: LOCAL,
+      model: 'llama3.1',
+    })
+  })
+
+  it('/ai/test does not send the stored key to a request-supplied base URL', async () => {
+    const r = await jsonReq(buildApp(), '/api/settings/ai/test', 'POST', {
+      provider: 'openai-compatible',
+      baseUrl: 'https://attacker.example/v1',
+    })
+    expect(r.status).toBe(200)
+    expect(factoryArgs).toMatchObject({ baseURL: 'https://attacker.example/v1' })
+    expect(factoryArgs).not.toHaveProperty('apiKey')
+  })
+
+  it('/ai/test reuses the stored key against the saved base URL', async () => {
+    await jsonReq(buildApp(), '/api/settings/ai/test', 'POST', {
+      provider: 'openai-compatible',
+      baseUrl: LOCAL,
+    })
+    expect(factoryArgs).toMatchObject({ baseURL: LOCAL, apiKey: 'sk-stored-secret' })
+  })
+
+  it('PATCH clears the stored key when the base URL changes without a new key', async () => {
+    const r = await jsonReq(buildApp(), '/api/settings/ai', 'PATCH', {
+      provider: 'openai-compatible',
+      baseUrl: 'https://attacker.example/v1',
+    })
+    expect(r.status).toBe(204)
+    expect(await adapter.getAiSettings()).toMatchObject({
+      baseUrl: 'https://attacker.example/v1',
+      apiKey: '',
+    })
+  })
+
+  it('PATCH keeps the stored key when only the model changes', async () => {
+    await jsonReq(buildApp(), '/api/settings/ai', 'PATCH', {
+      provider: 'openai-compatible',
+      baseUrl: LOCAL,
+      model: 'qwen2.5',
+    })
+    expect(await adapter.getAiSettings()).toMatchObject({ apiKey: 'sk-stored-secret', model: 'qwen2.5' })
+  })
+
+  it('PATCH clears the stored key on a provider switch without a new key', async () => {
+    await jsonReq(buildApp(), '/api/settings/ai', 'PATCH', { provider: 'openai' })
+    expect(await adapter.getAiSettings()).toMatchObject({ provider: 'openai', apiKey: '' })
+  })
+})
+
+describe('hosted providers ignore a browser-supplied base URL', () => {
+  it('an env-configured MiniMax key is never sent to a request baseUrl', async () => {
+    process.env.AI_PROVIDER = 'minimax'
+    process.env.MINIMAX_API_KEY = 'mm-env-secret'
+    await jsonReq(buildApp(), '/api/settings/ai/test', 'POST', {
+      provider: 'minimax',
+      baseUrl: 'https://attacker.example',
+    })
+    expect(factoryArgs).toMatchObject({ apiKey: 'mm-env-secret' })
+    expect(factoryArgs).not.toHaveProperty('baseURL')
+  })
+
+  it('a base URL stored for MiniMax via the DB is ignored', async () => {
+    await adapter.setAiSettings({
+      provider: 'minimax',
+      apiKey: 'mm-db-secret',
+      baseUrl: 'https://attacker.example',
+    })
+    const body = await (await buildApp().request('/api/settings/ai')).json()
+    expect(body.effective.baseUrl).toBe('')
+  })
 })
 
 describe('GET /api/settings/ai', () => {

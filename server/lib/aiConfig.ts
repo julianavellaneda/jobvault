@@ -59,7 +59,10 @@ export async function resolveAiConfig(adapter: DataAdapter): Promise<AiConfigRes
     const config: ResolvedAiConfig = {
       provider: row.provider,
       model: row.model,
-      baseUrl: row.baseUrl,
+      // Only openai-compatible takes a base URL from the Settings page. Hosted
+      // providers (including MiniMax, whose regional override is env-only)
+      // ignore a stored one so the saved key can't be sent to another host.
+      baseUrl: AI_PROVIDERS[row.provider].needsBaseUrl ? row.baseUrl : '',
       apiKey: row.apiKey,
     }
     return { source: 'db', ready: readyFor(row.provider, config), config }

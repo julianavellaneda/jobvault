@@ -47,6 +47,17 @@ export const users = sqliteTable('users', {
   createdAt: integer('created_at').notNull(),
 })
 
+// Server-side session records. The sealed cookie carries the id; deleting the
+// row (logout) revokes the session. Cascades when the user row is deleted.
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+})
+
 // Single-row table: id is always 'singleton'. Holds the in-app AI provider
 // config used only as a fallback when no AI_* env vars are set (see
 // server/lib/aiConfig.ts — env always wins, mirroring allowlist policy).

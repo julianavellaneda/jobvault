@@ -98,6 +98,62 @@ describe('safeUrl', () => {
     expect(await safeUrl('https://example.com', ipv6PublicResolver)).toEqual({ ok: true })
   })
 
+  // WHATWG URL parsing normalizes these literals to hex-group form
+  // (e.g. `[::ffff:127.0.0.1]` → `::ffff:7f00:1`), which a dotted-quad-only
+  // check misses. Each one lands on a private/loopback/metadata IPv4.
+  it.each([
+    'http://[::ffff:127.0.0.1]/',
+    'http://[::ffff:7f00:1]/',
+    'http://[::ffff:a9fe:a9fe]/latest/meta-data/',
+    'http://[::ffff:10.0.0.1]/',
+    'http://[::7f00:1]/',
+    'http://[::127.0.0.1]/',
+    'http://[64:ff9b::7f00:1]/',
+    'http://[64:ff9b::a9fe:a9fe]/',
+    'http://[64:ff9b:1::1]/',
+    'http://[2002:7f00:1::]/',
+    'http://[2002:a9fe:a9fe::1]/',
+    'http://[2001:0:4136:e378::1]/',
+    'http://[fec0::1]/',
+    'http://[fe80::1]/',
+    'http://[febf::1]/',
+    'http://[fd00::1]/',
+    'http://[ff02::1]/',
+    'http://[::]/',
+    'http://[100::1]/',
+    'http://[2001:db8::1]/',
+  ])('rejects IPv6 literal that maps to a private address: %s', async url => {
+    expect(await safeUrl(url, publicResolver)).toEqual({ ok: false, error: 'private_address' })
+  })
+
+  it.each([
+    ['::ffff:a9fe:a9fe', 6],
+    ['64:ff9b::a00:1', 6],
+    ['2002:c0a8:101::1', 6],
+    ['fec0::1', 6],
+  ] as const)('rejects hostnames resolving to embedded-private IPv6 %s', async (address, family) => {
+    const resolver: Resolver = async () => [{ address, family }]
+    expect(await safeUrl('https://sneaky.example.com', resolver)).toEqual({
+      ok: false,
+      error: 'private_address',
+    })
+  })
+
+  it.each([
+    'http://[2606:4700::1111]/',
+    'http://[::ffff:93.184.216.34]/',
+    'http://[64:ff9b::5db8:d822]/',
+    'http://[2002:5db8:d822::1]/',
+  ])('allows public IPv6 literal %s', async url => {
+    expect(await safeUrl(url, publicResolver)).toEqual({ ok: true })
+  })
+
+  it('rejects IPv4 documentation and shared ranges', async () => {
+    for (const url of ['http://192.0.2.1', 'http://198.51.100.7', 'http://203.0.113.9', 'http://100.64.0.1']) {
+      expect(await safeUrl(url, publicResolver)).toEqual({ ok: false, error: 'private_address' })
+    }
+  })
+
   it('returns dns_lookup_failed when resolver throws', async () => {
     const failing: Resolver = vi.fn(async () => {
       throw new Error('NXDOMAIN')

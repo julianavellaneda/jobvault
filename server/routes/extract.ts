@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { generateText } from 'ai'
+import { z } from 'zod'
+import { parseBody } from '../lib/parseBody.ts'
 import { requireUser } from '../lib/requireUser.ts'
 import { resolveSafeUrl, safeUrl, type Resolver } from '../lib/safeUrl.ts'
 import { pickAddress, pinnedFetch, type PinnedFetch } from '../lib/pinnedFetch.ts'
@@ -8,6 +10,8 @@ import { htmlToText } from '../lib/htmlToText.ts'
 import { getAdapter } from '../lib/db.ts'
 import { AI_PROVIDERS } from '../lib/aiProviders.ts'
 import { resolveAiConfig } from '../lib/aiConfig.ts'
+
+const extractBodySchema = z.object({ url: z.string().max(2048) })
 
 const MAX_HTML_BYTES = 1_000_000
 const FETCH_TIMEOUT_MS = 12_000
@@ -123,7 +127,10 @@ export async function fetchPage(
     if (truncated && DEBUG) console.log('[extract] body truncated at', MAX_HTML_BYTES, 'bytes')
     return { ok: true, text }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'fetch_failed' }
+    // Never echo the raw error: connection failures (ECONNREFUSED, TLS name
+    // mismatch, …) would turn this endpoint into a port-scan oracle.
+    if (DEBUG) console.error('[extract] fetch threw:', e)
+    return { ok: false, error: controller.signal.aborted ? 'fetch_timeout' : 'fetch_failed' }
   } finally {
     clearTimeout(timer)
   }
@@ -219,14 +226,10 @@ app.post('/', async c => {
     return c.json({ error: 'rate_limited', retryAfterSec: limit.retryAfterSec }, 429)
   }
 
-  let body: { url?: unknown }
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: 'invalid_url' }, 400)
-  }
-  const url = body?.url
-  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+  const parsed = await parseBody(c, extractBodySchema)
+  if (!parsed.ok) return parsed.response
+  const { url } = parsed.data
+  if (!/^https?:\/\//i.test(url)) {
     return c.json({ error: 'invalid_url' }, 400)
   }
 

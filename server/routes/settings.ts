@@ -45,7 +45,22 @@ app.patch('/ai', async c => {
   if (!auth.ok) return c.json({ error: auth.error }, auth.status)
   const parsed = await parseBody(c, aiSettingsPatchSchema)
   if (!parsed.ok) return parsed.response
-  await (await getAdapter()).setAiSettings(parsed.data)
+  const adapter = await getAdapter()
+  const patch = { ...parsed.data }
+  // A saved key stays bound to the provider + endpoint it was entered for.
+  // Changing either without supplying a key clears it, so a hijacked session
+  // can't repoint the base URL and have the next extraction send the key there.
+  const current = await adapter.getAiSettings()
+  if (current && patch.apiKey === undefined) {
+    const nextProvider = patch.provider ?? current.provider
+    const providerChanged = nextProvider !== current.provider
+    const baseUrlChanged =
+      AI_PROVIDERS[nextProvider].needsBaseUrl &&
+      patch.baseUrl !== undefined &&
+      patch.baseUrl !== current.baseUrl
+    if (providerChanged || baseUrlChanged) patch.apiKey = ''
+  }
+  await adapter.setAiSettings(patch)
   return c.body(null, 204)
 })
 
@@ -71,16 +86,23 @@ app.post('/ai/test', async c => {
   // without re-typing it.
   const provider = body.provider ?? stored.config.provider
   const meta = AI_PROVIDERS[provider]
+  const sameProvider = provider === stored.config.provider
+  // Only openai-compatible takes a base URL from the request. Hosted providers
+  // keep whatever the resolved config has (MiniMax's env-only regional URL).
+  const baseUrl = meta.needsBaseUrl
+    ? (body.baseUrl ?? (sameProvider ? stored.config.baseUrl : ''))
+    : sameProvider
+      ? stored.config.baseUrl
+      : ''
+  // Reuse the stored key only against the endpoint it was saved for — otherwise
+  // a request could point baseUrl at its own server and receive the key
+  // (including an operator's env key) in the Authorization header.
+  const canReuseKey = sameProvider && baseUrl === stored.config.baseUrl
   const config: ResolvedAiConfig = {
     provider,
     model: body.model ?? stored.config.model,
-    baseUrl: body.baseUrl ?? stored.config.baseUrl,
-    apiKey:
-      body.apiKey && body.apiKey.trim()
-        ? body.apiKey
-        : provider === stored.config.provider
-          ? stored.config.apiKey
-          : '',
+    baseUrl,
+    apiKey: body.apiKey?.trim() ? body.apiKey : canReuseKey ? stored.config.apiKey : '',
   }
 
   if (meta.needsBaseUrl && !config.baseUrl.trim()) {

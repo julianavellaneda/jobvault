@@ -14,12 +14,13 @@ export interface AuthState {
   user: AuthUser | null
   error: string | null
   minPasswordLength: number
+  setupTokenRequired: boolean
   refresh: () => Promise<void>
   signOut: () => Promise<void>
 }
 
 type MeResponse =
-  | { status: 'needs-setup'; minPasswordLength: number }
+  | { status: 'needs-setup'; minPasswordLength: number; setupTokenRequired: boolean }
   | { status: 'signed-out' }
   | { status: 'signed-in'; user: AuthUser }
 
@@ -28,6 +29,7 @@ export function useAuth(): AuthState {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [minPasswordLength, setMinPasswordLength] = useState(1)
+  const [setupTokenRequired, setSetupTokenRequired] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -38,7 +40,10 @@ export function useAuth(): AuthState {
       } else {
         setUser(null)
         setStatus(me.status)
-        if (me.status === 'needs-setup') setMinPasswordLength(me.minPasswordLength)
+        if (me.status === 'needs-setup') {
+          setMinPasswordLength(me.minPasswordLength)
+          setSetupTokenRequired(me.setupTokenRequired)
+        }
       }
       setError(null)
     } catch (e) {
@@ -59,7 +64,10 @@ export function useAuth(): AuthState {
         } else {
           setUser(null)
           setStatus(me.status)
-          if (me.status === 'needs-setup') setMinPasswordLength(me.minPasswordLength)
+          if (me.status === 'needs-setup') {
+            setMinPasswordLength(me.minPasswordLength)
+            setSetupTokenRequired(me.setupTokenRequired)
+          }
         }
         setError(null)
       } catch (e) {
@@ -83,5 +91,5 @@ export function useAuth(): AuthState {
     setStatus('signed-out')
   }, [])
 
-  return { status, user, error, minPasswordLength, refresh, signOut }
+  return { status, user, error, minPasswordLength, setupTokenRequired, refresh, signOut }
 }

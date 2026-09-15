@@ -1,8 +1,16 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, lte } from 'drizzle-orm'
 import type { AiSettingsRow, Application, PendingUrl } from '@/types'
-import type { DataAdapter, NewApplication, NewLocalUser, NewPendingUrl, StoredLocalUser } from '../adapter'
+import type {
+  DataAdapter,
+  NewApplication,
+  NewLocalUser,
+  NewPendingUrl,
+  NewSession,
+  StoredLocalUser,
+  StoredSession,
+} from '../adapter'
 import type { Db } from './client'
-import { aiSettings, applications, pendingUrls, users } from './schema'
+import { aiSettings, applications, pendingUrls, sessions, users } from './schema'
 
 const AI_SETTINGS_ID = 'singleton'
 
@@ -225,6 +233,30 @@ export class SqliteDataAdapter implements DataAdapter {
       { behavior: 'immediate' },
     )
     return rowToUser(row as typeof users.$inferSelect)
+  }
+
+  async createSession(input: NewSession): Promise<StoredSession> {
+    const row: StoredSession = {
+      id: crypto.randomUUID(),
+      userId: input.userId,
+      createdAt: Date.now(),
+      expiresAt: input.expiresAt,
+    }
+    await this.db.insert(sessions).values(row)
+    return row
+  }
+
+  async findSession(id: string): Promise<StoredSession | null> {
+    const rows = await this.db.select().from(sessions).where(eq(sessions.id, id)).limit(1)
+    return rows[0] ?? null
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await this.db.delete(sessions).where(eq(sessions.id, id))
+  }
+
+  async deleteExpiredSessions(now: number): Promise<void> {
+    await this.db.delete(sessions).where(lte(sessions.expiresAt, now))
   }
 
   async getAiSettings(): Promise<AiSettingsRow | null> {

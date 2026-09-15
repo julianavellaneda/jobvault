@@ -45,6 +45,8 @@ pub fn run() {
                 .map_err(|e| format!("sidecar lookup failed: {e}"))?
                 .args([resolve_server_entry(&app_handle).to_string_lossy().to_string()])
                 .env("PORT", port.to_string())
+                // Loopback only — the webview is the sole client.
+                .env("HOST", "127.0.0.1")
                 .env("DATABASE_URL", format!("file:{}", db_path.to_string_lossy()))
                 .env("SESSION_SECRET", &secret)
                 .env(
