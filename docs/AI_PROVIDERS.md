@@ -49,7 +49,7 @@ Keys set via the Settings page are stored **in plaintext** in the single-row `ai
 
 The key is **never returned to the browser** — `GET /api/settings/ai` only exposes a masked preview (`••••last4`).
 
-When you switch providers in the Settings page without entering a new key, the previous provider's key is **dropped** rather than silently reused under the new provider — re-enter (or leave blank for keyless local endpoints) before saving.
+A saved key is **bound to the provider and base URL it was entered with**. Switching providers, or changing an `openai-compatible` base URL, without entering a key clears the stored key (enforced server-side), and **Test connection** only reuses a stored key against the endpoint it was saved for. That way a hijacked session can't point the base URL at another server and collect the key.
 
 ## Graceful degradation
 
@@ -62,7 +62,7 @@ When AI is unconfigured, the key is missing, or the model errors, `/api/extract`
 ## Cost / safety notes
 
 - `/api/extract` and the test endpoint are rate-limited per signed-in user.
-- The SSRF guard in `server/lib/safeUrl.ts` rejects loopback, RFC1918, link-local, and IPv6 private addresses before fetching. The validated IP is then **pinned through to the socket** by `server/lib/pinnedFetch.ts` (Host header + TLS SNI preserved against the original hostname, cert validation against the hostname not the IP) so DNS rebinding between validation and connect cannot redirect the request to a private address. The same pin is applied on every redirect hop.
+- The SSRF guard in `server/lib/safeUrl.ts` rejects loopback, RFC1918, link-local, CGNAT, documentation, and non-global IPv6 addresses before fetching — including IPv4 addresses embedded in IPv6 (`::ffff:7f00:1`, NAT64 `64:ff9b::/96`, 6to4 `2002::/16`), which URL parsing normalizes into forms a naive check misses. Fetch failures return fixed codes (`fetch_failed` / `fetch_timeout`) rather than socket errors. The validated IP is then **pinned through to the socket** by `server/lib/pinnedFetch.ts` (Host header + TLS SNI preserved against the original hostname, cert validation against the hostname not the IP) so DNS rebinding between validation and connect cannot redirect the request to a private address. The same pin is applied on every redirect hop.
 - The fetched HTML is capped at 1 MB before reaching the model.
 - `/api/settings/ai/test` errors are normalized to a fixed vocabulary (`auth_error` / `model_not_found` / `network_error` / `timeout` / `rate_limited` / `test_failed`) so the endpoint can't be used to probe internal services through reflected upstream errors. The `baseUrl` field is rejected unless empty or a parseable `http(s)://` URL.
 - On cloud-hosted deployments, prefer the **environment-variable** configuration path (`AI_PROVIDER`, `AI_BASE_URL`, etc.) — env wins, which makes the in-app Settings page read-only and prevents a signed-in user from changing `baseUrl` at runtime.

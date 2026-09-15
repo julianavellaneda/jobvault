@@ -35,6 +35,14 @@ firebase-debug.log
 # Local Claude Code settings (machine-specific permissions / plugin overrides)
 .claude/settings.local.json
 
+# Local agent tooling and working notes — not part of the project
+.agents/
+.claude/skills/
+skills-lock.json
+/*-plan.md
+docs/internal/
+docs/superpowers/
+
 # Local SQLite (self-host data dir)
 data/
 *.db

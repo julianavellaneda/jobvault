@@ -57,7 +57,8 @@ is generated locally on first launch. No external services, no cloud sync.
 ## First run
 
 1. Start the app (Docker above, or `bun install && SESSION_SECRET=$(openssl rand -base64 48) bun run start`).
-2. Open <http://localhost:3000>. You'll see a one-time setup form — pick a username (3-32 characters) and a password (12+ characters). That account becomes the admin.
+2. Open <http://localhost:3000>. You'll see a one-time setup form — pick a username (3-32 characters) and a password (no minimum unless you set `MIN_PASSWORD_LENGTH`). That account becomes the admin.
+   - **Docker / any network-reachable instance:** the form also asks for a one-time **setup token**, printed in the logs (`docker compose logs app`). This keeps whoever finds a fresh instance first from claiming it.
 3. Optionally configure an AI provider in step 2 of the setup, or skip and set it up later under **Settings**.
 
 ### Headless / declarative bootstrap
@@ -97,7 +98,7 @@ bun run build
 SESSION_SECRET=$(openssl rand -base64 48) bun run start
 ```
 
-Open <http://localhost:3000> and complete the one-time setup. `data/app.db` is created on first boot with all migrations auto-applied.
+Open <http://localhost:3000> and complete the one-time setup. `data/app.db` is created on first boot with all migrations auto-applied. The server binds to `127.0.0.1` by default; set `HOST=0.0.0.0` to reach it from other devices.
 
 For development with hot reload:
 
@@ -107,6 +108,15 @@ bun run dev                       # vite on :5173, server on :3000
 ```
 
 Vite proxies `/api/*` to the Bun server, so you can use either port during dev.
+
+### Try it with demo data
+
+```
+DATABASE_URL=file:./data/demo.db bun run seed:demo
+DATABASE_URL=file:./data/demo.db SESSION_SECRET=$(openssl rand -base64 48) bun run start
+```
+
+The seed script fills a fresh database with ~45 applications at invented companies (all URLs use the reserved `.example` domain) and prints a `demo` login.
 
 ## Features
 
@@ -118,7 +128,53 @@ Vite proxies `/api/*` to the Bun server, so you can use either port during dev.
 - **Pending queue** to triage before promoting to a tracked application.
 - **Dashboard** — streak, applied-today, funnel, weekday heatmap, source / contributor breakdowns, with a date-range filter. Bespoke inline-SVG charts (no charting library); all stats computed client-side from a single source of truth.
 - **Light / dark theme** — toggle under **Settings → Appearance**; follows your system preference on first run.
-- **Self-host first** — username/password auth backed by local SQLite, set up in-app on first run or via `ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars for headless deploys. Sessions are sealed cookies (iron-session); passwords are scrypt-hashed.
+- **Self-host first** — username/password auth backed by local SQLite, set up in-app on first run or via `ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars for headless deploys. Passwords are scrypt-hashed; sessions are sealed cookies backed by a revocable server-side session table.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph clients[Clients]
+    SPA["React 19 SPA<br/>hash routing · optimistic writes"]
+    Desktop["Tauri 2 desktop shell"]
+  end
+
+  subgraph server["One Bun process · Hono"]
+    MW["CSP + CSRF middleware"]
+    Auth["/api/auth<br/>scrypt · rate limits · setup token"]
+    Rest["/api/applications · /api/pending<br/>/api/settings"]
+    Extract["/api/extract<br/>SSRF guard → IP-pinned fetch"]
+    Adapter["DataAdapter<br/>Drizzle ORM"]
+  end
+
+  DB[("SQLite file<br/>data/app.db")]
+  Posting["Job posting"]
+  LLM["Your AI provider<br/>OpenAI · Anthropic · Gemini · Ollama …"]
+
+  SPA -- "JSON · 5s poll" --> MW
+  Desktop -. "spawns on 127.0.0.1" .-> server
+  MW --> Auth & Rest & Extract
+  Auth & Rest --> Adapter --> DB
+  Extract --> Posting
+  Extract --> LLM
+```
+
+### Design decisions
+
+- **One process, one file.** A personal tracker shouldn't need Postgres, Redis, or a queue. Hono serves the API and the built SPA from a single Bun process; SQLite lives in one file you can back up with `cp`. Migrations apply at boot, and idle memory stays under 50 MB.
+- **Storage behind an interface.** Pages talk to a `DataAdapter`, not a database. That's what let the project move from Firebase to self-hosted SQLite without rewriting the UI, and it lets the real Drizzle adapter be tested against in-memory SQLite.
+- **Polling + optimistic writes instead of websockets.** Lists poll every 5 s (paused in background tabs), and edits apply immediately with per-row rollback on failure. It survives any reverse proxy and needs no connection state on the server.
+- **Derived state stays derived.** Dashboard stats (streak, funnel, heatmap) are computed client-side from the one list, never stored, so they can't drift. Charts are hand-written SVG rather than a charting dependency.
+- **AI is optional and bring-your-own-key.** Six providers sit behind one registry, and config resolves env-first with a Settings-page fallback. Keys never reach the browser and stay bound to the endpoint they were saved for. Without a key, extraction just doesn't prefill.
+- **Fetching arbitrary URLs is treated as hostile.** `/api/extract` resolves DNS and rejects private, loopback, and link-local targets, including IPv4 hidden inside IPv6 forms like `::ffff:7f00:1`. It then pins the validated IP to the socket (so DNS rebinding can't swap it), re-checks every redirect, caps the body at 1 MB, and returns fixed error codes rather than socket errors.
+- **Secure defaults for self-hosters.**
+  - The server binds to loopback unless told otherwise.
+  - A network-exposed instance needs a one-time setup token from the logs before anyone can create the admin.
+  - Failed logins are rate-limited per socket IP and per username.
+  - Sessions are revocable server-side.
+  - Responses carry a strict CSP, and cross-site form posts are rejected.
+  - The Docker image runs as a non-root user.
+- **Desktop without a second codebase.** The Tauri app spawns the same server as a sidecar on a random loopback port and points a webview at it. macOS builds are signed and notarized in CI.
 
 ## Documentation
 

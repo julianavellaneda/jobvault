@@ -6,6 +6,51 @@ All notable changes to this project are documented here. This project follows
 
 ## [Unreleased]
 
+A security-hardening release from an audit of the server, container, and CI.
+
+### Security
+- **SSRF: IPv4-embedded-in-IPv6 bypass fixed.** URL parsing normalizes
+  `[::ffff:127.0.0.1]` to `::ffff:7f00:1`, which the old dotted-quad check let
+  through (as well as NAT64 `64:ff9b::/96`, 6to4 `2002::/16`, IPv4-compatible
+  `::/96`, and site-local `fec0::/10`). `safeUrl` now parses IPv6 into bytes,
+  unwraps embedded IPv4, and only allows global unicast. Fetch errors return
+  fixed codes instead of socket messages.
+- **Login rate limiting can no longer be bypassed or trivially abused.** The
+  client IP comes from the socket; `X-Forwarded-For` is only honoured with the
+  new `TRUST_PROXY=true`, and then only its rightmost hop. Only failed attempts
+  count, with an added per-username cap. The limiter's key map is bounded.
+- **Stored AI keys are bound to their endpoint.** `POST /api/settings/ai/test`
+  no longer pairs a saved (or env) key with a request-supplied base URL, and
+  `PATCH /api/settings/ai` clears the key when the provider or base URL changes
+  without a new one. Hosted providers — including MiniMax from the Settings
+  page — ignore a stored base URL.
+- **First-run setup needs a one-time token on network-reachable instances.**
+  When bound beyond loopback, `POST /api/auth/setup` requires a token printed
+  to the logs (or `SETUP_TOKEN`).
+- **Sessions are revocable.** A new `sessions` table (migration `0004`) backs
+  each cookie; logout deletes the row, and signing in replaces the browser's
+  previous session.
+- **CSRF + security headers.** `hono/csrf` on `/api/*`, JSON-only request
+  bodies (`415` otherwise), and a strict Content-Security-Policy with
+  `frame-ancestors 'none'` via `secureHeaders`.
+- **Docker image runs as the unprivileged `bun` user**; the entrypoint fixes
+  `/app/data` ownership first so existing volumes keep working.
+- **CI supply chain.** Actions pinned to commit SHAs, Bun pinned, least-privilege
+  `permissions`, and Dependabot for actions, Bun, Docker, and Cargo.
+
+### Added
+- `HOST` (default `127.0.0.1`), `TRUST_PROXY`, `COOKIE_SECURE`, and
+  `SETUP_TOKEN` env vars. See `docs/CONFIGURATION.md`.
+- `bun run seed:demo` — fills a database with fictional demo data.
+
+### Changed
+- **Source installs bind to loopback by default.** Set `HOST=0.0.0.0` to expose
+  the server on your network. The Docker image already does; the desktop
+  sidecar is pinned to loopback.
+- **Everyone is signed out once** after upgrading, because pre-0.6 cookies carry
+  no server-side session id.
+- Internal planning docs are no longer tracked in the repository.
+
 ## [0.5.0] - 2026-06-17
 
 A ground-up visual overhaul. Jobvault gets a cohesive design-token system,

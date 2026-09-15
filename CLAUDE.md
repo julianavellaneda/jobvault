@@ -22,10 +22,13 @@ A polished, self-hostable, human-in-the-loop application tracker. Single-process
 
 `server/index.ts` is the Bun entry. It:
 1. Loads `.env.local` if present (`process.loadEnvFile`).
-2. Mounts Hono routes from `server/routes/{applications,pending,auth,extract}.ts`.
-3. Calls `getAdapter()` once at boot, which auto-applies any pending Drizzle migrations from `src/storage/sqlite/migrations/` before opening the port.
-4. Serves `dist/` statically with a SPA fallback to `dist/index.html` (hash-routed pages survive refresh).
-5. Exports `{ port, fetch }` for `Bun.serve`.
+2. Applies `secureHeaders()` (strict CSP, `frame-ancestors 'none'`, no HSTS — that's the proxy's job) to everything and `csrf()` to `/api/*`.
+3. Mounts Hono routes from `server/routes/{applications,pending,auth,extract,settings}.ts`.
+4. Calls `getAdapter()` once at boot, which auto-applies any pending Drizzle migrations from `src/storage/sqlite/migrations/` before opening the port. Prints the setup token if no users exist and one is required.
+5. Serves `dist/` statically with a SPA fallback to `dist/index.html` (hash-routed pages survive refresh).
+6. Exports `{ port, hostname, fetch }` for `Bun.serve`. `hostname` comes from `HOST` (default `127.0.0.1`, `server/lib/listenHost.ts`); the Docker image sets `0.0.0.0`, the Tauri sidecar sets `127.0.0.1`.
+
+`parseBody` requires `Content-Type: application/json` whenever a body is present (415 otherwise) — this is part of the CSRF defence, so don't read bodies with `c.req.json()` directly.
 
 Route handlers are thin: `requireUser(c)` → `parseBody(c, schema)` → `getAdapter()` call → `c.json(...)`.
 
@@ -37,17 +40,21 @@ Route handlers are thin: `requireUser(c)` → `parseBody(c, schema)` → `getAda
 
 Local username/password auth backed by SQLite. `requireUser(c)` reads the sealed session cookie, looks up the user id, and returns the row or 401. There is no OAuth, no allowlist, no `AUTH_MODE` env var. The `users` table key is `username` (3-32 chars, `[a-zA-Z0-9._-]`, case-insensitive) — no email, no separate display name.
 
-The first user is created via `POST /api/auth/setup`, which is gated on `countUsers() === 0` and returns 410 once any user exists. For Docker/CI, `ADMIN_USERNAME` + `ADMIN_PASSWORD` env vars seed the admin at startup when the DB is empty (`server/lib/bootstrap.ts`).
+The first user is created via `POST /api/auth/setup`, which is gated on `countUsers() === 0` and returns 410 once any user exists. When the server is bound beyond loopback, setup also requires a one-time `setupToken` (`server/lib/setupToken.ts`: random per process and printed at boot, or `SETUP_TOKEN`); `GET /api/auth/me`'s `needs-setup` payload carries `setupTokenRequired`. For Docker/CI, `ADMIN_USERNAME` + `ADMIN_PASSWORD` env vars seed the admin at startup when the DB is empty (`server/lib/bootstrap.ts`).
+
+Login rate limiting (`routes/auth.ts`) counts **failed** attempts per client IP (5 / 5 min) and per username (20 / 15 min). `server/lib/clientIp.ts` uses the socket address via Hono `getConnInfo`; `X-Forwarded-For` (rightmost hop) only with `TRUST_PROXY=true`.
 
 Password length has no minimum by default; the optional `MIN_PASSWORD_LENGTH` env var raises it (`server/lib/passwordPolicy.ts`, applied in `routes/auth.ts` setup + `bootstrap.ts`; the resolved value is surfaced to the SPA in the `needs-setup` payload of `GET /api/auth/me`).
 
-Passwords are hashed with `node:crypto` scrypt (`server/lib/password.ts`). Sessions remain iron-session sealed cookies (`server/lib/session.ts`); payload is just `{ userId }`.
+Passwords are hashed with `node:crypto` scrypt (`server/lib/password.ts`). Sessions are iron-session sealed cookies (`server/lib/session.ts`) whose payload is `{ userId, sid }`; `sid` references a row in the `sessions` table (migration `0004`, cascades on user delete). `getAppSession` rejects a missing/expired/mismatched row, `destroyAppSession` deletes it, and `saveAppSession` replaces the browser's previous session. The cookie's `Secure` flag defaults to `NODE_ENV === 'production'`, overridable via `COOKIE_SECURE`.
 
-`GET /api/auth/me` returns one of `{ status: 'needs-setup' }`, `{ status: 'signed-out' }`, `{ status: 'signed-in', user }`. The SPA's `useAuth` hook branches off that.
+`GET /api/auth/me` returns one of `{ status: 'needs-setup', minPasswordLength, setupTokenRequired }`, `{ status: 'signed-out' }`, `{ status: 'signed-in', user }`. The SPA's `useAuth` hook branches off that.
 
 ### AI providers (`server/lib/aiProviders.ts` + `aiConfig.ts`)
 
-`AI_PROVIDERS` registry is the single integration point (OpenAI, Anthropic, Google, MiniMax, OpenRouter, generic OpenAI-compatible). `resolveAiConfig()` follows an env-wins / DB-fallback policy: `AI_PROVIDER` (or legacy bare `MINIMAX_API_KEY`) env wins; otherwise the single-row `ai_settings` table set via the Settings page. Both `routes/extract.ts` and `routes/settings.ts` (`/api/settings/ai{,/test}`) go through the registry. Keys are plaintext in `data/app.db` (trust model) and **never returned to the browser** — only a masked `••••last4` preview. Custom base URL applies only to `openai-compatible` (hosted providers ignore it, so a stale local endpoint can't leak across a provider switch); a provider with no `defaultModel` isn't `ready` until a model id is set. See `docs/AI_PROVIDERS.md`.
+`AI_PROVIDERS` registry is the single integration point (OpenAI, Anthropic, Google, MiniMax, OpenRouter, generic OpenAI-compatible). `resolveAiConfig()` follows an env-wins / DB-fallback policy: `AI_PROVIDER` (or legacy bare `MINIMAX_API_KEY`) env wins; otherwise the single-row `ai_settings` table set via the Settings page. Both `routes/extract.ts` and `routes/settings.ts` (`/api/settings/ai{,/test}`) go through the registry. Keys are plaintext in `data/app.db` (trust model) and **never returned to the browser** — only a masked `••••last4` preview. Custom base URL applies only to `openai-compatible` (hosted providers, including MiniMax on the DB path, ignore a stored one; MiniMax's regional URL is env-only). A stored key is bound to its provider + base URL: `/ai/test` only reuses it when both match, and `PATCH /ai` clears it when either changes without a new key. A provider with no `defaultModel` isn't `ready` until a model id is set. See `docs/AI_PROVIDERS.md`.
+
+`/api/extract` goes through `server/lib/safeUrl.ts` (parses IPv6 to bytes and unwraps embedded IPv4 — `::ffff:`, NAT64, 6to4 — before the private-range check) and `pinnedFetch.ts` (dials the validated IP, re-validates each redirect). Fetch errors are mapped to fixed codes; never return raw socket error messages.
 
 ### Frontend (`src/`)
 
@@ -92,7 +99,9 @@ bun run test
 ```
 
 - `server/routes/handlers.test.ts` — Hono handler tests via `app.request()`. Mocks `server/lib/db.ts` (in-memory adapter) and `server/lib/session.ts` (skip iron-session crypto). Covers auth shim, validation, auto-stamp, atomicity, 405.
-- `server/lib/{safeUrl,htmlToText}.test.ts` — extract-helper unit tests.
+- `server/routes/{auth,settings,extract}.test.ts` — setup token, login rate limiting (incl. `TRUST_PROXY`), AI key binding, SSRF + error sanitization in `fetchPage`.
+- `server/lib/session.test.ts` — real iron-session sealing against the memory adapter: revocation on logout, replay, expiry, legacy cookies, `COOKIE_SECURE`.
+- `server/lib/{safeUrl,rateLimit,setupToken,parseBody,htmlToText}.test.ts` — unit tests.
 - `src/storage/sqlite/adapter.test.ts` — drizzle adapter exercised against an in-process `better-sqlite3` `:memory:` DB (vitest runs on Node, which can't load `bun:sqlite`). The Drizzle query API is identical across drivers, so the same `SqliteDataAdapter` is tested end-to-end.
 - `src/lib/{applicationsView,stats,urls}.test.ts` — pure-function UI logic.
 - `tsconfig.app.json` excludes `src/**/*.test.ts` so node-only test code doesn't pollute the SPA build.
@@ -122,4 +131,5 @@ All three must pass with no errors.
 - **Phase 3** (frontend cutover): UI switched to REST polling + optimistic writes; Firebase kept alive only for the migration script.
 - **Phase 4** (OSS migration): Firestore data exported to local SQLite; Vercel + Firebase code deleted; Hono-on-Bun server replaces `api/`; LICENSE/README/docs/Docker/CI shipped. Repo is OSS-ready.
 - **Phase 5** (multi-provider AI): `AI_PROVIDERS` registry + `resolveAiConfig` (env-wins/DB-fallback); `ai_settings` table (migration `0001`); `/api/settings/ai` routes; in-app **Settings** page with provider/model/key + Test connection. OpenAI/Anthropic/Google/OpenRouter/OpenAI-compatible added alongside MiniMax; legacy `MINIMAX_API_KEY` still works.
-- **Phase 6** (UI overhaul, v0.5.0, current): ground-up reskin onto a design-token system (`src/index.css`) + Geist fonts + light/dark theme toggle (Settings → Appearance). `recharts` dropped for bespoke inline-SVG charts. New shared primitives (`Chip`, `Monogram`, `SegmentedControl`, `StatusPill`). Manual **Add application** dialog with an optional URL (`optionalHttpUrlSchema`); pure form logic in `src/lib/newApplication.ts`. Dashboard gains a date-range filter.
+- **Phase 6** (UI overhaul, v0.5.0): ground-up reskin onto a design-token system (`src/index.css`) + Geist fonts + light/dark theme toggle (Settings → Appearance). `recharts` dropped for bespoke inline-SVG charts. New shared primitives (`Chip`, `Monogram`, `SegmentedControl`, `StatusPill`). Manual **Add application** dialog with an optional URL (`optionalHttpUrlSchema`); pure form logic in `src/lib/newApplication.ts`. Dashboard gains a date-range filter.
+- **Phase 7** (security hardening, unreleased): IPv6-aware SSRF guard, socket-IP + per-username login limits with `TRUST_PROXY`, AI keys bound to their endpoint, setup token on exposed instances, server-side `sessions` table (migration `0004`), CSRF + CSP, loopback default bind, non-root container, SHA-pinned CI + Dependabot.
