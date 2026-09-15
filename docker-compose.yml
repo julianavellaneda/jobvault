@@ -17,9 +17,17 @@ services:
       # Required. Generate with: `openssl rand -base64 48`
       SESSION_SECRET: ${SESSION_SECRET:-}
       # Optional headless bootstrap. If both set and DB is empty,
-      # creates this admin on first start. Otherwise, complete setup in the UI.
+      # creates this admin on first start. Otherwise, complete setup in the UI
+      # with the one-time token from `docker compose logs app`.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+
+      # ── Network ───────────────────────────────────────────────────────
+      # Set to "true" only if a reverse proxy (Caddy, nginx, Traefik) is in
+      # front, so login rate limiting sees real client IPs.
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      # Plain HTTP on a LAN IP? Browsers drop Secure cookies there — set "false".
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
 
       # ── AI extraction (optional, BYO key) ─────────────────────────────
       # Env wins over the in-app Settings page. Leave unset to configure
